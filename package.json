@@ -1,0 +1,23 @@
+{
+  "name": "sudoku-studio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "浏览器数独工具：面/边/角可交互、可编辑、可加符号，支持杀手笼、温度计、箭头等约束。",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "typescript": "^5.7.3",
+    "vite": "^8.2.1"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  }
+}
