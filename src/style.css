@@ -547,40 +547,34 @@ body {
 }
 
 .global-constraints {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  /* padding: 10px; */
-  /* border: 1px solid var(--mode-border, var(--line));
-  border-radius: 10px;
-  background: var(--mode-bg, #fafbfc); */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.global-constraints .group-label {
+  grid-column: 1 / -1;
 }
 
 .global-constraints label {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
   cursor: pointer;
+  min-width: 0;
 }
 
 .global-constraints input {
-  margin-top: 3px;
+  margin: 0;
+  flex: none;
   accent-color: var(--accent);
 }
 
-.global-constraints span {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
 .global-constraints strong {
-  font-size: 12.5px;
-}
-
-.global-constraints small {
-  color: var(--muted);
-  font-size: 10.5px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .group {
@@ -635,6 +629,20 @@ body {
   border-color: var(--accent);
   color: #fff;
   font-weight: 600;
+}
+
+/* 擦除按钮：红色描边、占据整行，突出危险操作 */
+.tool-btn[data-tool="erase"] {
+  grid-column: 1 / -1;
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.tool-btn[data-tool="erase"].active {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
 }
 
 /* 线路工具在按钮左侧复用盘面线色，长列表中也能快速定位。 */

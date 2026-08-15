@@ -146,6 +146,11 @@ export interface LineConstraint extends LineStyle {
   kind: LineConstraintKind;
   /** 按绘制顺序排列，允许横、竖和斜向连接 */
   cells: CellRef[];
+  /**
+   * 仅自定义线（custom）使用：相邻格对集合，支持分叉与环。
+   * 存在时渲染与擦除优先使用它，cells 仅作为向后兼容的回退。
+   */
+  edges?: Array<[CellRef, CellRef]>;
   /** 自定义线的文字规则说明 */
   description?: string;
 }
@@ -228,4 +233,6 @@ export interface Puzzle {
   skyscrapers: SkyscraperClue[];
   xSums: XSumClue[];
   littleKillers: LittleKillerClue[];
+  /** 解题模式下绘制的自由草稿线，不随题面导出。 */
+  solveLines: LineConstraint[];
 }

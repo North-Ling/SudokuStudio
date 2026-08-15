@@ -23,21 +23,21 @@ export function ToolPanel({ app, sync }: Props) {
     </div>
     {app.mode === "edit" && <div className="global-constraints">
       <div className="group-label">全局额外限制</div>
-      <label>
+      <label title="两条主对角线上的数字分别不能重复；自动显示两条主对角线">
         <input type="checkbox" checked={app.puzzle.globalConstraints.diagonal} onChange={() => { app.toggleGlobalConstraint("diagonal"); sync(); }} />
-        <span><strong>对角线不重复</strong><small>自动显示两条主对角线</small></span>
+        <strong>对角线数独</strong>
       </label>
-      <label>
+      <label title="国际象棋马步相邻的两个格子不能出现相同数字">
         <input type="checkbox" checked={app.puzzle.globalConstraints.antiKnight} onChange={() => { app.toggleGlobalConstraint("antiKnight"); sync(); }} />
-        <span><strong>无马数独</strong><small>马步位置不能出现相同数字</small></span>
+        <strong>无马数独</strong>
       </label>
-      <label>
+      <label title="对角相邻的两个格子不能出现相同数字">
         <input type="checkbox" checked={app.puzzle.globalConstraints.antiKing} onChange={() => { app.toggleGlobalConstraint("antiKing"); sync(); }} />
-        <span><strong>无缘数独</strong><small>对角相邻格不能出现相同数字</small></span>
+        <strong>无缘数独</strong>
       </label>
-      <label>
+      <label title="上下左右相邻格中的数字不能相差 1">
         <input type="checkbox" checked={app.puzzle.globalConstraints.nonConsecutive} onChange={() => { app.toggleGlobalConstraint("nonConsecutive"); sync(); }} />
-        <span><strong>不连续数独</strong><small>上下左右相邻数字不能相差 1</small></span>
+        <strong>不连续数独</strong>
       </label>
     </div>}
     <div id="tools">

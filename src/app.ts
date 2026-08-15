@@ -12,6 +12,7 @@ import type {
   EightDirection,
   GlobalConstraints,
   GridSpec,
+  LineConstraint,
   LineConstraintKind,
   LookoutAnchor,
   Puzzle,
@@ -91,6 +92,7 @@ export type ToolMode =
   | "lookout"
   | "x-sum"
   | "little-killer"
+  | "free-line"
   | "erase";
 
 export type AppMode = "edit" | "solve";
@@ -150,6 +152,7 @@ const LINE_TOOL_KIND: Partial<Record<ToolMode, LineConstraintKind>> = {
 
 export function pathTypeForTool(tool: ToolMode): PathType | null {
   if (tool === "thermo" || tool === "arrow") return tool;
+  if (tool === "free-line") return "custom";
   return LINE_TOOL_KIND[tool] ?? null;
 }
 
@@ -218,6 +221,7 @@ export class App {
   pendingCage: CellRef[] | null = null;
   pendingCageId: number | null = null;
   pendingPath: PendingPath | null = null;
+  pendingCustomEdges: Array<[CellRef, CellRef]> | null = null;
 
   private base: Puzzle;
   private solveDraft: Puzzle;
@@ -227,6 +231,7 @@ export class App {
   private cellDecorationStroke: CellDecorationStroke | null = null;
   private edgeStroke: EdgeStroke | null = null;
   private cageStrokeAction: "add" | "remove" | null = null;
+  private lastCustomCell: CellRef | null = null;
 
   constructor(puzzle: Puzzle) {
     this.base = clonePuzzle(puzzle);
@@ -291,6 +296,10 @@ export class App {
       hover: this.hover,
       pendingCage: this.pendingCage,
       pendingPath: this.pendingPath,
+      pendingCustomEdges: this.pendingCustomEdges ?? undefined,
+      pendingCustomCell: this.lastCustomCell,
+      pendingCustomColor: this.lineColor,
+      pendingCustomThickness: this.lineThickness,
     };
     render(this.ctx, this.puzzle, this.layout, opts);
   }
@@ -319,6 +328,8 @@ export class App {
       this.pendingCageId = null;
       this.cageError = "";
       this.pendingPath = null;
+      this.pendingCustomEdges = null;
+      this.lastCustomCell = null;
       this.littleKillerError = "";
       this.render();
       return;
@@ -355,6 +366,10 @@ export class App {
     if (!isPathTool(tool) || (previousTool !== tool && isPathTool(previousTool))) {
       this.pendingPath = null;
     }
+    if (!this.isFreeLineTool()) {
+      this.pendingCustomEdges = null;
+      this.lastCustomCell = null;
+    }
     // 边 / 角 / 擦除工具不再需要选中格
     const cellTools = new Set<ToolMode>([
       "digit",
@@ -364,7 +379,7 @@ export class App {
       "cell-shape",
       "cage",
       ...Array.from(new Set<ToolMode>([
-        "thermo", "arrow", ...Object.keys(LINE_TOOL_KIND) as ToolMode[],
+        "thermo", "arrow", ...Object.keys(LINE_TOOL_KIND) as ToolMode[], "free-line",
       ])),
     ]);
     const multiSelectionTools = new Set<ToolMode>(["digit", "corner", "center", "color"]);
@@ -400,6 +415,8 @@ export class App {
     this.pendingCage = null;
     this.pendingCageId = null;
     this.pendingPath = null;
+    this.pendingCustomEdges = null;
+    this.lastCustomCell = null;
     this.render();
   }
 
@@ -522,7 +539,7 @@ export class App {
     this.selectedCells = [[r, c]];
   }
 
-  /** 普通点击总是重新开始选择；Shift 点击可添加或移除任意离散格。 */
+  /** 普通点击重新选择；再次点击已选中的单格则取消选中；Shift 点击可添加或移除。 */
   selectInputCell(r: number, c: number, additive = false): void {
     const index = this.selectionContains(r, c);
     if (additive) {
@@ -533,6 +550,13 @@ export class App {
         this.selectedCells.push([r, c]);
         this.selection = [r, c];
       }
+    } else if (
+      this.selectedCells.length === 1 &&
+      this.selectedCells[0][0] === r &&
+      this.selectedCells[0][1] === c
+    ) {
+      this.selection = null;
+      this.selectedCells = [];
     } else {
       this.setSingleSelection(r, c);
     }
@@ -558,7 +582,11 @@ export class App {
 
   handleCellClick(r: number, c: number, additive = false): void {
     if (this.tool === "none") {
-      this.selection = [r, c];
+      if (this.selection && this.selection[0] === r && this.selection[1] === c) {
+        this.selection = null;
+      } else {
+        this.selection = [r, c];
+      }
       this.selectedCells = [];
       this.render();
       return;
@@ -1405,7 +1433,93 @@ export class App {
     this.render();
   }
 
+  private isFreeLineTool(): boolean {
+    return this.tool === "line-custom" || this.tool === "free-line";
+  }
+
+  private freeLineCellClick(r: number, c: number): void {
+    if (this.pendingCustomEdges == null) {
+      this.pendingCustomEdges = [];
+      this.lastCustomCell = [r, c];
+    } else {
+      this.connectCustomCell(r, c);
+    }
+    this.render();
+  }
+
+  private freeLineCellPaint(r: number, c: number): void {
+    if (this.pendingCustomEdges == null) {
+      this.pendingCustomEdges = [];
+      this.lastCustomCell = [r, c];
+    } else {
+      this.connectCustomCell(r, c);
+    }
+    this.render();
+  }
+
+  private connectCustomCell(r: number, c: number): void {
+    const last = this.lastCustomCell;
+    if (!last || (last[0] === r && last[1] === c)) return;
+    if (areAdjacent(last, [r, c])) {
+      this.toggleCustomEdge(last, [r, c]);
+    }
+    this.lastCustomCell = [r, c];
+  }
+
+  private toggleCustomEdge(a: CellRef, b: CellRef): void {
+    const edges = this.pendingCustomEdges;
+    if (!edges) return;
+    const index = edges.findIndex(([p, q]) =>
+      (p[0] === a[0] && p[1] === a[1] && q[0] === b[0] && q[1] === b[1]) ||
+      (p[0] === b[0] && p[1] === b[1] && q[0] === a[0] && q[1] === a[1])
+    );
+    if (index >= 0) edges.splice(index, 1);
+    else edges.push([a, b]);
+  }
+
+  private edgesToCells(edges: Array<[CellRef, CellRef]>): CellRef[] {
+    const cells: CellRef[] = [];
+    const seen = new Set<string>();
+    for (const [a, b] of edges) {
+      for (const p of [a, b]) {
+        const key = `${p[0]},${p[1]}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          cells.push([p[0], p[1]]);
+        }
+      }
+    }
+    return cells;
+  }
+
+  private commitFreeLine(): void {
+    if (this.tool === "line-custom" && this.mode !== "edit") return;
+    const edges = this.pendingCustomEdges;
+    if (!edges || edges.length === 0) return;
+    const line: LineConstraint = {
+      id: nextId(this.puzzle),
+      kind: "custom",
+      cells: this.edgesToCells(edges),
+      edges: edges.map(([a, b]) => [[a[0], a[1]], [b[0], b[1]]] as [CellRef, CellRef]),
+      color: this.lineColor,
+      thickness: this.lineThickness,
+      description: this.tool === "line-custom"
+        ? this.customLineDescription.trim() || undefined
+        : undefined,
+    };
+    this.history.snapshot(this.puzzle);
+    if (this.tool === "free-line") this.puzzle.solveLines.push(line);
+    else this.puzzle.lines.push(line);
+    this.pendingCustomEdges = null;
+    this.lastCustomCell = null;
+    this.render();
+  }
+
   pathCellClick(r: number, c: number): void {
+    if (this.isFreeLineTool()) {
+      this.freeLineCellClick(r, c);
+      return;
+    }
     if (this.mode !== "edit") return;
     const type = pathTypeForTool(this.tool);
     if (!type) return;
@@ -1441,6 +1555,10 @@ export class App {
   }
 
   pathCellPaint(r: number, c: number): void {
+    if (this.isFreeLineTool()) {
+      this.freeLineCellPaint(r, c);
+      return;
+    }
     if (this.mode !== "edit") return;
     const path = this.pendingPath;
     if (path == null) {
@@ -1468,6 +1586,10 @@ export class App {
   }
 
   commitPath(): void {
+    if (this.isFreeLineTool()) {
+      this.commitFreeLine();
+      return;
+    }
     if (this.mode !== "edit") return;
     const path = this.pendingPath;
     if (!path || path.cells.length < 2) return;
@@ -1502,6 +1624,8 @@ export class App {
 
   cancelPath(): void {
     this.pendingPath = null;
+    this.pendingCustomEdges = null;
+    this.lastCustomCell = null;
     this.render();
   }
 
@@ -1561,6 +1685,7 @@ export class App {
   // ==========================================================================
 
   eraseAt(x: number, y: number): void {
+    if (this.mode === "solve" && this.eraseSolveLinesAt(x, y)) return;
     if (this.mode === "edit") {
       if (this.eraseDrawnConstraintAt(x, y)) return;
       const outerCell = hitOuterCell(this.layout, x, y);
@@ -1659,7 +1784,9 @@ export class App {
       return true;
     }
 
-    const lineIndex = this.puzzle.lines.findIndex((line) => hitPath(line.cells));
+    const lineIndex = this.puzzle.lines.findIndex((line) =>
+      this.hitLineAt(line, x, y, pathTolerance)
+    );
     if (lineIndex >= 0) {
       this.snapshotForChange();
       this.puzzle.lines.splice(lineIndex, 1);
@@ -1686,6 +1813,39 @@ export class App {
       this.puzzle.cages.splice(cageIndex, 1);
       this.render();
       return true;
+    }
+    return false;
+  }
+
+  private eraseSolveLinesAt(x: number, y: number): boolean {
+    const tolerance = this.layout.cell * 0.2;
+    const index = this.puzzle.solveLines.findIndex((line) =>
+      this.hitLineAt(line, x, y, tolerance)
+    );
+    if (index < 0) return false;
+    this.snapshotForChange();
+    this.puzzle.solveLines.splice(index, 1);
+    this.render();
+    return true;
+  }
+
+  private hitLineAt(
+    line: LineConstraint,
+    x: number,
+    y: number,
+    tolerance: number,
+  ): boolean {
+    if (line.edges && line.edges.length > 0) {
+      return line.edges.some(([a, b]) => {
+        const from = cellCenter(this.layout, a[0], a[1]);
+        const to = cellCenter(this.layout, b[0], b[1]);
+        return segmentDistance(x, y, from.x, from.y, to.x, to.y) <= tolerance;
+      });
+    }
+    for (let i = 1; i < line.cells.length; i++) {
+      const from = cellCenter(this.layout, line.cells[i - 1][0], line.cells[i - 1][1]);
+      const to = cellCenter(this.layout, line.cells[i][0], line.cells[i][1]);
+      if (segmentDistance(x, y, from.x, from.y, to.x, to.y) <= tolerance) return true;
     }
     return false;
   }
@@ -1808,6 +1968,11 @@ export class App {
     if (this.pendingCage) {
       this.pendingCage = null;
       this.pendingCageId = null;
+      this.render();
+    }
+    if (this.pendingCustomEdges) {
+      this.pendingCustomEdges = null;
+      this.lastCustomCell = null;
       this.render();
     }
   }

@@ -59,7 +59,7 @@ function CharacterDial({ app, sync }: Props) {
   return <div className="character-dial" aria-label="字符罗盘">
     <div className="selection-summary">
       {app.selection ? `已选择 ${Math.max(1, app.selectedCells.length)} 格` : "请先选择格子"}
-      <span>普通单击重选 · 拖动扩展 · Shift 追加</span>
+      <span>普通单击重选/取消 · 拖动扩展 · Shift 追加</span>
     </div>
     <div className="keypad" role="group" aria-label="候选字符组" style={{ gridTemplateColumns: `repeat(${candidateShape.cols + 1}, minmax(0, 1fr))` }}>
       <button className={`palette-btn${app.tokenPalette === "digits" ? " active" : ""}`} onClick={() => { app.setTokenPalette("digits"); sync(); }}>123</button>
@@ -125,12 +125,12 @@ export function ToolContext({ app, sync }: Props) {
         ? "选择格子后，通过小键盘切换中标（居中候选数）。"
         : "选择格子后，通过小键盘切换角标（按数字位置排列）。";
     content = <>
-      <Hint>{hint} 普通单击总是重新选择；按住拖动可沿正交相邻格扩展，按住 Shift 点击或拖动可追加离散区域。字符会一次作用于全部选中格；若全部已有该字符，再点一次即可全部移除。</Hint>
+      <Hint>{hint} 普通单击重新选择、再点同一格可取消选中；按住拖动可沿正交相邻格扩展，按住 Shift 点击或拖动可追加离散区域。字符会一次作用于全部选中格；若全部已有该字符，再点一次即可全部移除。</Hint>
       <CharacterDial app={app} sync={sync} />
     </>;
   } else if (t === "color") {
     content = <>
-      <Hint>普通单击总是重新选择；按住拖动可沿正交相邻格扩展，按住 Shift 点击或拖动可追加离散区域。颜色会一次作用于全部选中格；若全部已有该颜色，再点一次即可全部移除。</Hint>
+      <Hint>普通单击重新选择、再点同一格可取消选中；按住拖动可沿正交相邻格扩展，按住 Shift 点击或拖动可追加离散区域。颜色会一次作用于全部选中格；若全部已有该颜色，再点一次即可全部移除。</Hint>
       <div className="selection-summary color-selection-summary">
         {app.selection ? `已选择 ${Math.max(1, app.selectedCells.length)} 格` : "请先选择格子"}
         <span>同一格的多种颜色仍会等分显示</span>
@@ -328,6 +328,7 @@ export function ToolContext({ app, sync }: Props) {
     </>;
   } else if (isPathTool(t)) {
     const pathType = pathTypeForTool(t);
+    const isFreeLine = t === "free-line";
     const variantNames = {
       "region-sum": "区域等和线",
       zipper: "拉链线",
@@ -342,17 +343,24 @@ export function ToolContext({ app, sync }: Props) {
       palindrome: "回文数线",
       custom: "自定义线",
     } as const;
-    const description = pathType && pathType !== "thermo" && pathType !== "arrow"
-      ? LINE_RULE_DESCRIPTIONS[pathType]
-      : pathType === "thermo"
-        ? "灯泡端最小，沿温度计严格递增。"
-        : "圆圈格是总和，箭头线上其余格子的和等于圆圈数字。";
-    const name = pathType && pathType !== "thermo" && pathType !== "arrow"
-      ? variantNames[pathType]
-      : pathType === "thermo" ? "温度计" : "箭头";
+    const description = isFreeLine
+      ? "在格子中间自由连线，可随时分叉、构成环；作为解题草稿标记，用擦除工具删除。"
+      : pathType && pathType !== "thermo" && pathType !== "arrow"
+        ? LINE_RULE_DESCRIPTIONS[pathType]
+        : pathType === "thermo"
+          ? "灯泡端最小，沿温度计严格递增。"
+          : "圆圈格是总和，箭头线上其余格子的和等于圆圈数字。";
+    const name = isFreeLine
+      ? "自由画线"
+      : pathType && pathType !== "thermo" && pathType !== "arrow"
+        ? variantNames[pathType]
+        : pathType === "thermo" ? "温度计" : "箭头";
     const hasLineStyle = Boolean(pathType);
+    const freeformHint = isFreeLine || pathType === "custom"
+      ? "点击相邻格连线，再次点击同一段可移除；可从任意节点分叉，也可首尾相连成环。"
+      : "按住拖动连续绘制，支持斜向连接和反向回退。";
     content = <div className="path-controls">
-      <Hint><strong>{name}：</strong>{description} 按住拖动连续绘制，支持斜向连接和反向回退。</Hint>
+      <Hint><strong>{name}：</strong>{description} {freeformHint}</Hint>
       {hasLineStyle && <>
         <div className="row line-style-row">
           <label>颜色 <input type="color" value={app.lineColor} onChange={(event) => { app.setLineColor(event.target.value); sync(); }} /></label>
@@ -361,7 +369,7 @@ export function ToolContext({ app, sync }: Props) {
             <output>{app.lineThickness}%</output>
           </label>
         </div>
-        {pathType === "custom" && <textarea
+        {pathType === "custom" && !isFreeLine && <textarea
           rows={3}
           maxLength={240}
           value={app.customLineDescription}

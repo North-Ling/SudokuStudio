@@ -11,6 +11,7 @@ import type {
   GridSide,
   KillerCage,
   LittleKillerClue,
+  LineConstraint,
   LineConstraintKind,
   Puzzle,
   GridSpec,
@@ -132,6 +133,7 @@ export function createEmptyPuzzle(
     skyscrapers: [],
     xSums: [],
     littleKillers: [],
+    solveLines: [],
   };
 }
 
@@ -150,6 +152,14 @@ export function deserializePuzzle(json: string): Puzzle {
   const fallbackCols = Array.isArray(data.cells?.[0]) ? data.cells[0].length : 9;
   const grid = normalizeGridSpec(data.grid, fallbackRows, fallbackCols);
   const base = createEmptyPuzzle("新数独", grid);
+  const normalizeLine = (line: LineConstraint): LineConstraint => ({
+    ...line,
+    color: line.color || undefined,
+    thickness: Number.isFinite(line.thickness)
+      ? Math.max(0, Math.min(100, Number(line.thickness)))
+      : undefined,
+    description: line.description?.trim() || undefined,
+  });
   const cells = Array.from({ length: grid.rows }, (_, r) =>
     Array.from({ length: grid.cols }, (_, c) => {
       const cell = data.cells?.[r]?.[c] ?? base.cells[r][c];
@@ -212,14 +222,8 @@ export function deserializePuzzle(json: string): Puzzle {
         ? Math.max(0, Math.min(100, Number(arrow.thickness)))
         : undefined,
     })),
-    lines: (data.lines ?? []).map((line) => ({
-      ...line,
-      color: line.color || undefined,
-      thickness: Number.isFinite(line.thickness)
-        ? Math.max(0, Math.min(100, Number(line.thickness)))
-        : undefined,
-      description: line.description?.trim() || undefined,
-    })),
+    lines: (data.lines ?? []).map(normalizeLine),
+    solveLines: (data.solveLines ?? []).map(normalizeLine),
     globalConstraints: {
       diagonal: data.globalConstraints?.diagonal ?? false,
       antiKnight: data.globalConstraints?.antiKnight ?? false,
@@ -287,6 +291,7 @@ export function nextId(p: Puzzle): number {
   for (const t of p.thermos) max = Math.max(max, t.id);
   for (const a of p.arrows) max = Math.max(max, a.id);
   for (const line of p.lines) max = Math.max(max, line.id);
+  for (const line of p.solveLines) max = Math.max(max, line.id);
   return max + 1;
 }
 

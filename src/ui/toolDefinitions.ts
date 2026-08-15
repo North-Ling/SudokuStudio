@@ -20,7 +20,8 @@ export const SOLVE_TOOL_GROUPS: ToolGroupDef[] = [
       { tool: "corner", label: "中标", hint: "选择格子后点击小键盘字符切换中标（Shift+数字）" },
       { tool: "color", label: "着色", hint: "选择格子后点击颜色进行一次填充或移除" },
       { tool: "edge-bold", label: "描边", hint: "加粗边，或连续添加叉号、三角、方形等边装饰" },
-      { tool: "erase", label: "擦除", hint: "清除答案、标记、颜色或解题描边" },
+      { tool: "free-line", label: "画线", hint: "在格子中间自由连线（支持分叉与环），作为解题草稿标记" },
+      { tool: "erase", label: "橡皮擦", hint: "清除答案、标记、颜色或解题描边" },
     ],
   },
 ];
@@ -35,6 +36,8 @@ export const AUTHOR_TOOL_GROUPS: ToolGroupDef[] = [
       { tool: "color", label: "着色", hint: "选择格子后点击颜色进行一次填充或移除" },
       { tool: "cell-shape", label: "格内形状", hint: "绘制可叠加的方形、圆形、三角、叉号、八向箭头或自定义标记" },
       { tool: "edge-bold", label: "描边", hint: "加粗边，或连续添加叉号、三角、方形等边装饰" },
+      { tool: "edge-text", label: "边文字", hint: "点击边添加自定义文字" },
+      { tool: "corner-text", label: "顶点文字", hint: "点击顶点添加文字 / 数字" },
     ],
   },
   {
@@ -74,6 +77,7 @@ export const AUTHOR_TOOL_GROUPS: ToolGroupDef[] = [
     label: "交汇点与边上的点约束",
     tools: [
       { tool: "lookout", label: "瞭望塔", hint: "在网格交汇点或边上圈出相邻格必须出现的数字" },
+      { tool: "corner-arrow", label: "顶点箭头", hint: "选择方向后点击网格顶点添加箭头" },
     ],
   },
   {
@@ -85,15 +89,7 @@ export const AUTHOR_TOOL_GROUPS: ToolGroupDef[] = [
     ],
   },
   {
-    label: "自由题面标记",
-    tools: [
-      { tool: "edge-text", label: "边文字", hint: "点击边添加自定义文字" },
-      { tool: "corner-arrow", label: "顶点箭头", hint: "选择方向后点击网格顶点添加箭头" },
-      { tool: "corner-text", label: "顶点文字", hint: "点击顶点添加文字 / 数字" },
-    ],
-  },
-  {
     label: "清理",
-    tools: [{ tool: "erase", label: "擦除", hint: "点击格子 / 边 / 角清除内容" }],
+    tools: [{ tool: "erase", label: "橡皮擦", hint: "点击格子 / 边 / 角清除内容" }],
   },
 ];

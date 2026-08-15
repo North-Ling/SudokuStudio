@@ -80,6 +80,14 @@ export interface RenderOpts {
   pendingCage: CellRef[] | null;
   /** 正在构建的路径（温度计 / 箭头预览） */
   pendingPath: PendingPath | null;
+  /** 正在构建的自由线边集合（自定义线 / 解题画线预览） */
+  pendingCustomEdges?: Array<[CellRef, CellRef]>;
+  /** 自由线当前锚点格（预览起点） */
+  pendingCustomCell?: CellRef | null;
+  /** 自由线预览颜色 */
+  pendingCustomColor?: string;
+  /** 自由线预览粗细（相对单元格百分比） */
+  pendingCustomThickness?: number;
   /** 导出图片时可关闭编辑器的自动判错高亮。 */
   showConflicts?: boolean;
 }
@@ -148,6 +156,7 @@ export function render(
   // 约束线高于基础网格，但低于笼框、边/点符号和数字。
   drawGlobalConstraints(ctx, puzzle, layout);
   drawConstraints(ctx, puzzle, layout);
+  drawSolveLines(ctx, puzzle, layout);
   drawPending(ctx, layout, opts);
   drawOutsideClues(ctx, puzzle, layout);
   drawBoldEdges(ctx, puzzle, layout);
@@ -503,7 +512,29 @@ function drawConstraints(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layou
   }
 
   for (const line of p.lines) {
+    drawLineConstraint(ctx, line, layout);
+  }
+}
+
+function drawLineConstraint(
+  ctx: CanvasRenderingContext2D,
+  line: LineConstraint,
+  layout: Layout,
+): void {
+  if (line.kind === "custom" && line.edges && line.edges.length > 0) {
+    drawFreeformLine(ctx, line, layout);
+  } else {
     drawVariantLine(ctx, line.kind, line.cells, layout, line);
+  }
+}
+
+function drawSolveLines(
+  ctx: CanvasRenderingContext2D,
+  p: Puzzle,
+  layout: Layout,
+): void {
+  for (const line of p.solveLines) {
+    drawLineConstraint(ctx, line, layout);
   }
 }
 
@@ -630,6 +661,35 @@ function drawVariantLine(
       ctx.fill();
     }
   }
+}
+
+/** 按边集合绘制自由线（支持分叉与环）。 */
+function drawFreeformLine(
+  ctx: CanvasRenderingContext2D,
+  line: LineConstraint,
+  layout: Layout,
+): void {
+  const edges = line.edges ?? [];
+  if (edges.length === 0) return;
+  const color = line.color || LINE_DEFAULT_COLORS.custom;
+  const thickness = Math.max(0, Math.min(100, line.thickness ?? 10));
+  const lineWidth = layout.cell * (thickness / 100);
+  const trace = () => {
+    ctx.beginPath();
+    for (const [[r1, c1], [r2, c2]] of edges) {
+      const a = cellCenter(layout, r1, c1);
+      const b = cellCenter(layout, r2, c2);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+    }
+    ctx.stroke();
+  };
+  ctx.strokeStyle = "rgba(255,255,255,0.9)";
+  ctx.lineWidth = lineWidth + layout.cell * 0.07;
+  trace();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  trace();
 }
 
 function drawArrowHead(
@@ -1190,6 +1250,36 @@ function drawPending(
     if (type === "thermo") {
       drawThermoConstraint(ctx, cells, layout, opts.pendingPath);
     }
+  }
+
+  if (opts.pendingCustomCell) {
+    const anchor = cellCenter(layout, opts.pendingCustomCell[0], opts.pendingCustomCell[1]);
+    ctx.fillStyle = "rgba(100,116,139,0.28)";
+    ctx.beginPath();
+    ctx.arc(anchor.x, anchor.y, cell * 0.14, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (opts.pendingCustomEdges && opts.pendingCustomEdges.length > 0) {
+    const color = opts.pendingCustomColor || LINE_DEFAULT_COLORS.custom;
+    const thickness = Math.max(0, Math.min(100, opts.pendingCustomThickness ?? 10));
+    const lineWidth = cell * (thickness / 100);
+    const trace = () => {
+      ctx.beginPath();
+      for (const [[r1, c1], [r2, c2]] of opts.pendingCustomEdges!) {
+        const a = cellCenter(layout, r1, c1);
+        const b = cellCenter(layout, r2, c2);
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+      }
+      ctx.stroke();
+    };
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = lineWidth + cell * 0.07;
+    trace();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    trace();
   }
 }
 
