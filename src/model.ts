@@ -202,21 +202,21 @@ export function deserializePuzzle(json: string): Puzzle {
       ...thermo,
       color: thermo.color || undefined,
       thickness: Number.isFinite(thermo.thickness)
-        ? Math.max(4, Math.min(30, Number(thermo.thickness)))
+        ? Math.max(0, Math.min(100, Number(thermo.thickness)))
         : undefined,
     })),
     arrows: (data.arrows ?? []).map((arrow) => ({
       ...arrow,
       color: arrow.color || undefined,
       thickness: Number.isFinite(arrow.thickness)
-        ? Math.max(4, Math.min(30, Number(arrow.thickness)))
+        ? Math.max(0, Math.min(100, Number(arrow.thickness)))
         : undefined,
     })),
     lines: (data.lines ?? []).map((line) => ({
       ...line,
       color: line.color || undefined,
       thickness: Number.isFinite(line.thickness)
-        ? Math.max(4, Math.min(30, Number(line.thickness)))
+        ? Math.max(0, Math.min(100, Number(line.thickness)))
         : undefined,
       description: line.description?.trim() || undefined,
     })),
@@ -321,7 +321,7 @@ export const LINE_DEFAULT_COLORS: Record<LineConstraintKind, string> = {
 };
 
 export const THERMO_DEFAULT_STYLE = { color: "#94a3b8", thickness: 20 } as const;
-export const ARROW_DEFAULT_STYLE = { color: "#475569", thickness: 9 } as const;
+export const ARROW_DEFAULT_STYLE = { color: "#475569", thickness: 10 } as const;
 
 export function setSkyscraperClue(
   p: Puzzle,

@@ -1,7 +1,7 @@
 import { isPathTool, type App } from "./app";
 import type { CellRef } from "./types";
 import { hitCell } from "./geometry";
-import { gridTokens, letterGridTokens } from "./grid";
+import { gridTokens, letterGridTokens, symbolGridTokens } from "./grid";
 
 const L = (app: App) => app.getLayout();
 
@@ -204,7 +204,9 @@ export function attachInput(
 
     const palette = app.tokenPalette === "digits"
       ? gridTokens(app.puzzle.grid)
-      : letterGridTokens(app.puzzle.grid);
+      : app.tokenPalette === "letters"
+        ? letterGridTokens(app.puzzle.grid)
+        : symbolGridTokens(app.puzzle.grid);
     const letter = e.key.length === 1 ? e.key.toUpperCase() : "";
     if (palette.includes(letter) && /^[A-Z]$/.test(letter)) {
       e.preventDefault();

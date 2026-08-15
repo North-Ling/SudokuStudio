@@ -134,10 +134,16 @@ export function cageInsetSegments(
     const bottom = !contains(r + 1, c);
     const left = !contains(r, c - 1);
 
-    const topLeftInset = left ? inset : contains(r - 1, c - 1) ? -inset : 0;
-    const topRightInset = right ? inset : contains(r - 1, c + 1) ? -inset : 0;
-    const bottomRightInset = right ? inset : contains(r + 1, c + 1) ? -inset : 0;
-    const bottomLeftInset = left ? inset : contains(r + 1, c - 1) ? -inset : 0;
+    // 角偏移：凸角（两条外边相交）向内缩进；凹角（恰一条外边、且对角格
+    // 在笼内）向外扩以连接内凹边；其余（平直边 / 全内部）保持 0，从而保证
+    // 连续的竖直 / 水平边界不会在相邻格子交界处断开。
+    const cornerOffset = (a: boolean, b: boolean, diag: boolean) =>
+      a && b ? inset : a !== b && diag ? -inset : 0;
+
+    const topLeftInset = cornerOffset(top, left, contains(r - 1, c - 1));
+    const topRightInset = cornerOffset(top, right, contains(r - 1, c + 1));
+    const bottomRightInset = cornerOffset(bottom, right, contains(r + 1, c + 1));
+    const bottomLeftInset = cornerOffset(bottom, left, contains(r + 1, c - 1));
 
     if (top) segments.push({
       x1: x + topLeftInset,

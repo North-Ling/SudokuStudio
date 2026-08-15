@@ -1,7 +1,7 @@
-import type { ChangeEvent, ReactNode } from "react";
+import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { isPathTool, pathTypeForTool, type App } from "../app";
 import { COLOR_PALETTE, LINE_RULE_DESCRIPTIONS } from "../model";
-import { candidateGridShape, gridTokens, letterGridTokens, maximumStandardSum } from "../grid";
+import { candidateGridShape, gridTokens, letterGridTokens, maximumStandardSum, symbolGridTokens } from "../grid";
 import type {
   CellDecoration,
   ColorName,
@@ -35,25 +35,39 @@ function Hint({ children }: { children: ReactNode }) {
 function CharacterDial({ app, sync }: Props) {
   const tokens = app.tokenPalette === "digits"
     ? gridTokens(app.puzzle.grid)
-    : letterGridTokens(app.puzzle.grid);
+    : app.tokenPalette === "letters"
+      ? letterGridTokens(app.puzzle.grid)
+      : symbolGridTokens(app.puzzle.grid);
   const candidateShape = candidateGridShape(app.puzzle.grid);
+  // 自定义字符输入用本地草稿显示：中文等输入法在组合拼音期间原样展示，
+  // 待选字完成后再截断为单字符，避免受控输入在 IME 组合中被截断成单个字母。
+  const [customDraft, setCustomDraft] = useState(app.customCellToken);
+  const composingRef = useRef(false);
+
+  const commitCustomToken = (raw: string) => {
+    const token = Array.from(raw)[0] ?? "";
+    app.setCustomCellToken(token);
+    setCustomDraft(token);
+  };
+
   const applyCustom = () => {
     if (!app.customCellToken) return;
     app.applyPaletteToken(app.customCellToken);
     sync();
   };
+
   return <div className="character-dial" aria-label="字符罗盘">
     <div className="selection-summary">
       {app.selection ? `已选择 ${Math.max(1, app.selectedCells.length)} 格` : "请先选择格子"}
       <span>普通单击重选 · 拖动扩展 · Shift 追加</span>
     </div>
-    <div className="palette-switch" role="group" aria-label="候选字符组">
-      <button className={app.tokenPalette === "digits" ? "active" : ""} onClick={() => { app.setTokenPalette("digits"); sync(); }}>123</button>
-      <button className={app.tokenPalette === "letters" ? "active" : ""} onClick={() => { app.setTokenPalette("letters"); sync(); }}>ABC</button>
-    </div>
-    <div className="token-grid" style={{ gridTemplateColumns: `repeat(${candidateShape.cols}, minmax(32px, 1fr))` }}>
+    <div className="keypad" role="group" aria-label="候选字符组" style={{ gridTemplateColumns: `repeat(${candidateShape.cols + 1}, minmax(0, 1fr))` }}>
+      <button className={`palette-btn${app.tokenPalette === "digits" ? " active" : ""}`} onClick={() => { app.setTokenPalette("digits"); sync(); }}>123</button>
+      <button className={`palette-btn${app.tokenPalette === "letters" ? " active" : ""}`} onClick={() => { app.setTokenPalette("letters"); sync(); }}>ABC</button>
+      <button className={`palette-btn${app.tokenPalette === "symbols" ? " active" : ""}`} title="符号" onClick={() => { app.setTokenPalette("symbols"); sync(); }}>★◆</button>
       {tokens.map((token) => <button
         key={token}
+        className="token-btn"
         disabled={!app.selection}
         aria-label={`输入 ${token}`}
         onClick={(event) => {
@@ -64,15 +78,27 @@ function CharacterDial({ app, sync }: Props) {
       >{token}</button>)}
     </div>
     <div className="custom-token-row">
-      <input
-        type="text"
-        data-input="customCellToken"
-        value={app.customCellToken}
-        placeholder="任意单字符"
-        onChange={(event) => { app.setCustomCellToken(event.target.value); sync(); }}
-        onKeyDown={(event) => { if (event.key === "Enter") applyCustom(); }}
-      />
-      <button disabled={!app.customCellToken || !app.selection} onClick={applyCustom}>填入 / 切换</button>
+      <div className="custom-input-group">
+        <input
+          type="text"
+          data-input="customCellToken"
+          value={customDraft}
+          placeholder="自定义"
+          onChange={(event) => {
+            const value = event.target.value;
+            const composing = composingRef.current || (event.nativeEvent as InputEvent).isComposing;
+            if (composing) setCustomDraft(value);
+            else commitCustomToken(value);
+          }}
+          onCompositionStart={() => { composingRef.current = true; }}
+          onCompositionEnd={(event) => {
+            composingRef.current = false;
+            commitCustomToken(event.currentTarget.value);
+          }}
+          onKeyDown={(event) => { if (event.key === "Enter") applyCustom(); }}
+        />
+        <button className="custom-apply" disabled={!app.customCellToken || !app.selection} title="填入或再次点击移除该字符" onClick={applyCustom}>填入</button>
+      </div>
       <button className="danger keypad-delete" disabled={!app.selection} title="删除全部选中格的对应内容" onClick={() => { app.keyClear(); sync(); }}>⌫ 删除</button>
     </div>
   </div>;
@@ -143,12 +169,12 @@ export function ToolContext({ app, sync }: Props) {
       ["down-left", "↙"], ["down", "↓"], ["down-right", "↘"],
     ];
     content = <>
-      <Hint>在单元格内绘制题面形状；不同形状和不同方向的小箭头可以叠加。按住滑动可连续添加或删除当前形状。</Hint>
+      <Hint>在单元格内绘制题面形状；箭头可多选方向一次填入，不同形状和方向可叠加。按住滑动可连续添加或删除。</Hint>
       <div className="row shape-options">
         {shapeOptions.map(([kind, label]) => <button key={kind} className={`opt-btn${app.cellShapeKind === kind ? " active" : ""}`} onClick={() => { app.cellShapeKind = kind; sync(); }}>{label}</button>)}
       </div>
       {app.cellShapeKind === "arrow" && <div className="direction-grid" aria-label="格内箭头方向">
-        {arrowDirections.map(([direction, label]) => <button key={direction} className={`opt-btn${app.cellArrowDirection === direction ? " active" : ""}`} onClick={() => { app.cellArrowDirection = direction; sync(); }}>{label}</button>)}
+        {arrowDirections.map(([direction, label]) => <button key={direction} className={`opt-btn${app.cellArrowDirections.includes(direction) ? " active" : ""}`} onClick={() => { app.toggleCellArrowDirection(direction); sync(); }}>{label}</button>)}
       </div>}
       {app.cellShapeKind === "custom" && <div className="row">
         <input type="text" data-input="cellShapeText" value={app.cellShapeText} maxLength={6} placeholder="自定义文字或符号" onChange={(event) => { app.cellShapeText = event.target.value; sync(); }} />
@@ -325,13 +351,13 @@ export function ToolContext({ app, sync }: Props) {
       ? variantNames[pathType]
       : pathType === "thermo" ? "温度计" : "箭头";
     const hasLineStyle = Boolean(pathType);
-    content = <>
+    content = <div className="path-controls">
       <Hint><strong>{name}：</strong>{description} 按住拖动连续绘制，支持斜向连接和反向回退。</Hint>
       {hasLineStyle && <>
         <div className="row line-style-row">
           <label>颜色 <input type="color" value={app.lineColor} onChange={(event) => { app.setLineColor(event.target.value); sync(); }} /></label>
           <label className="line-width-control">粗细
-            <input type="range" min={4} max={30} step={1} value={app.lineThickness} onChange={(event) => { app.setLineThickness(Number(event.target.value)); sync(); }} />
+            <input type="range" min={0} max={100} step={10} value={app.lineThickness} onChange={(event) => { app.setLineThickness(Number(event.target.value)); sync(); }} />
             <output>{app.lineThickness}%</output>
           </label>
         </div>
@@ -343,12 +369,11 @@ export function ToolContext({ app, sync }: Props) {
           onChange={(event) => { app.setCustomLineDescription(event.target.value); sync(); }}
         />}
       </>}
-      <div className="row">
+      <div className="row path-actions">
         <button className="primary" onClick={() => { app.commitPath(); sync(); }}>✓ 完成</button>
         <button onClick={() => { app.cancelPath(); sync(); }}>取消</button>
-        
       </div>
-    </>;
+    </div>;
   } else {
     content = <Hint>{app.mode === "solve"
       ? "按住滑动可连续清除答案、候选、着色和解题描边；题目约束与已知数保持锁定。"

@@ -275,3 +275,30 @@ export function downloadBlob(blob: Blob, filename: string): void {
   anchor.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/**
+ * 生成数独缩略图（PNG dataURL），用于题库卡片预览。
+ * 复用与主盘面相同的渲染引擎，不显示选中、悬停与自动判错高亮。
+ */
+export function renderPuzzleThumbnail(puzzle: Puzzle, maxSize = 168): string {
+  const displayRows = puzzle.grid.rows + 2;
+  const displayCols = puzzle.grid.cols + 2;
+  const cell = Math.max(1, Math.min(maxSize / displayCols, maxSize / displayRows));
+  const width = Math.max(1, Math.round(displayCols * cell));
+  const height = Math.max(1, Math.round(displayRows * cell));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+  render(ctx, puzzle, computeLayout(width, height, puzzle.grid.rows, puzzle.grid.cols), {
+    selection: null,
+    selectedCells: [],
+    highlightValue: "",
+    hover: null,
+    pendingCage: null,
+    pendingPath: null,
+    showConflicts: false,
+  });
+  return canvas.toDataURL("image/png");
+}

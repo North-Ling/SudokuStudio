@@ -19,6 +19,13 @@ const SYMBOLS = [
   "A", "B", "C", "D", "E", "F", "G",
 ] as const;
 const LETTER_SYMBOLS = "ABCDEFGHIJKLMNOP".split("");
+// 与 123 / ABC 等价的符号组，用于题面标记（星、圆、三角、箭头等常用符号）。
+const SYMBOL_TOKENS = [
+  "★", "☆", "●", "○", "▲", "△", "◆", "◇",
+  "■", "□", "✚", "✖", "✓", "✗", "→", "←",
+] as const;
+
+// 
 
 export function standardPresetFor(rows: number, cols: number): StandardGridPreset | null {
   if (rows !== cols) return null;
@@ -71,6 +78,10 @@ export function gridTokens(grid: GridSpec): string[] {
 
 export function letterGridTokens(grid: GridSpec): string[] {
   return LETTER_SYMBOLS.slice(0, Math.max(grid.rows, grid.cols));
+}
+
+export function symbolGridTokens(grid: GridSpec): string[] {
+  return SYMBOL_TOKENS.slice(0, Math.max(grid.rows, grid.cols));
 }
 
 export function candidateGridShape(grid: GridSpec): { rows: number; cols: number } {

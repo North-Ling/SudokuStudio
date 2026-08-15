@@ -163,7 +163,7 @@ type EdgeStroke =
   | { kind: "symbol"; symbol: EdgeSymbol | null; match?: EdgeSymbol };
 
 type CellDecorationStroke = {
-  decoration: CellDecoration;
+  decorations: CellDecoration[];
   remove: boolean;
 };
 
@@ -185,10 +185,10 @@ export class App {
 
   mode: AppMode = "solve";
   tool: ToolMode = "digit";
-  tokenPalette: "digits" | "letters" = "digits";
+  tokenPalette: "digits" | "letters" | "symbols" = "digits";
   customCellToken = "";
   cellShapeKind: CellDecoration["kind"] = "circle";
-  cellArrowDirection: EightDirection = "up";
+  cellArrowDirections: EightDirection[] = ["up"];
   cellShapeText = "";
   edgeDrawKind: "bold" | EdgeDecoration["kind"] = "bold";
   edgeMarkText = "";
@@ -699,15 +699,25 @@ export class App {
     this.render();
   }
 
-  private currentCellDecoration(): CellDecoration | null {
+  private currentCellDecorations(): CellDecoration[] {
     if (this.cellShapeKind === "arrow") {
-      return { kind: "arrow", direction: this.cellArrowDirection };
+      return this.cellArrowDirections.map((direction) => ({
+        kind: "arrow",
+        direction,
+      }));
     }
     if (this.cellShapeKind === "custom") {
       const text = this.cellShapeText.trim();
-      return text ? { kind: "custom", text } : null;
+      return text ? [{ kind: "custom", text }] : [];
     }
-    return { kind: this.cellShapeKind };
+    return [{ kind: this.cellShapeKind }];
+  }
+
+  toggleCellArrowDirection(direction: EightDirection): void {
+    const index = this.cellArrowDirections.indexOf(direction);
+    if (index >= 0) this.cellArrowDirections.splice(index, 1);
+    else this.cellArrowDirections.push(direction);
+    this.render();
   }
 
   private decorationEquals(a: CellDecoration, b: CellDecoration): boolean {
@@ -716,28 +726,37 @@ export class App {
 
   toggleCellDecoration(r: number, c: number): void {
     if (this.mode !== "edit") return;
-    const decoration = this.currentCellDecoration();
-    if (!decoration) return;
+    const decorations = this.currentCellDecorations();
+    if (decorations.length === 0) return;
     const cell = this.puzzle.cells[r][c];
-    const index = cell.decorations.findIndex((item) => this.decorationEquals(item, decoration));
+    const allPresent = decorations.every((decoration) =>
+      cell.decorations.some((item) => this.decorationEquals(item, decoration))
+    );
     this.snapshotForChange();
-    if (index >= 0) cell.decorations.splice(index, 1);
-    else cell.decorations.push(decoration);
+    for (const decoration of decorations) {
+      const index = cell.decorations.findIndex((item) =>
+        this.decorationEquals(item, decoration)
+      );
+      if (allPresent) {
+        if (index >= 0) cell.decorations.splice(index, 1);
+      } else if (index < 0) {
+        cell.decorations.push(structuredClone(decoration));
+      }
+    }
     this.render();
   }
 
   beginCellDecorationStroke(r: number, c: number): void {
     if (this.mode !== "edit") return;
-    const decoration = this.currentCellDecoration();
-    if (!decoration) return;
+    const decorations = this.currentCellDecorations();
+    if (decorations.length === 0) return;
     this.selection = [r, c];
     this.selectedCells = [];
-    this.cellDecorationStroke = {
-      decoration,
-      remove: this.puzzle.cells[r][c].decorations.some((item) =>
-        this.decorationEquals(item, decoration)
-      ),
-    };
+    const cell = this.puzzle.cells[r][c];
+    const allPresent = decorations.every((decoration) =>
+      cell.decorations.some((item) => this.decorationEquals(item, decoration))
+    );
+    this.cellDecorationStroke = { decorations, remove: allPresent };
     this.paintCellDecorationStroke(r, c);
   }
 
@@ -752,14 +771,31 @@ export class App {
     const stroke = this.cellDecorationStroke;
     if (!stroke) return;
     const cell = this.puzzle.cells[r][c];
-    const index = cell.decorations.findIndex((item) =>
-      this.decorationEquals(item, stroke.decoration)
-    );
-    if (stroke.remove && index < 0) return;
-    if (!stroke.remove && index >= 0) return;
-    this.snapshotForChange();
-    if (stroke.remove) cell.decorations.splice(index, 1);
-    else cell.decorations.push(structuredClone(stroke.decoration));
+    if (stroke.remove) {
+      const hasAny = stroke.decorations.some((decoration) =>
+        cell.decorations.some((item) => this.decorationEquals(item, decoration))
+      );
+      if (!hasAny) return;
+      this.snapshotForChange();
+      for (const decoration of stroke.decorations) {
+        const index = cell.decorations.findIndex((item) =>
+          this.decorationEquals(item, decoration)
+        );
+        if (index >= 0) cell.decorations.splice(index, 1);
+      }
+    } else {
+      const allPresent = stroke.decorations.every((decoration) =>
+        cell.decorations.some((item) => this.decorationEquals(item, decoration))
+      );
+      if (allPresent) return;
+      this.snapshotForChange();
+      for (const decoration of stroke.decorations) {
+        const index = cell.decorations.findIndex((item) =>
+          this.decorationEquals(item, decoration)
+        );
+        if (index < 0) cell.decorations.push(structuredClone(decoration));
+      }
+    }
     this.render();
   }
 
@@ -1354,7 +1390,7 @@ export class App {
 
   setLineThickness(value: number): void {
     if (!Number.isFinite(value)) return;
-    this.lineThickness = Math.max(4, Math.min(30, Math.round(value)));
+    this.lineThickness = Math.max(0, Math.min(100, Math.round(value)));
     if (this.pendingPath) {
       this.pendingPath.thickness = this.lineThickness;
     }
@@ -1713,7 +1749,7 @@ export class App {
     else this.render();
   }
 
-  setTokenPalette(palette: "digits" | "letters"): void {
+  setTokenPalette(palette: "digits" | "letters" | "symbols"): void {
     this.tokenPalette = palette;
     this.render();
   }

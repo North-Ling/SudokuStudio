@@ -231,12 +231,12 @@ function drawLittleKillers(
     const ux = dx / length;
     const uy = dy / length;
     const label = {
-      x: anchor.x - ux * cell * 0.13,
-      y: anchor.y - uy * cell * 0.13,
+      x: anchor.x,
+      y: anchor.y,
     };
     const shaftStart = {
-      x: anchor.x + ux * cell * 0.17,
-      y: anchor.y + uy * cell * 0.17,
+      x: anchor.x + ux * cell * 0.2,
+      y: anchor.y + uy * cell * 0.2,
     };
     const headLength = cell * 0.18;
     const headHalfWidth = cell * 0.085;
@@ -467,7 +467,7 @@ function drawCageBorders(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layou
     const prefix = relation === "at-least" ? "≥" : relation === "at-most" ? "≤" : "";
     const label = `${prefix}${cage.sum == null ? "?" : cage.sum}`;
     const inset = cell * 0.1;
-    const fontSize = Math.max(10, cell * 0.3);
+    const fontSize = Math.max(9, cell * 0.26);
     ctx.font = `600 ${fontSize}px ${FONT}`;
     const tw = ctx.measureText(label).width;
     const px = rect.x + inset + tw / 2 + fontSize * 0.2;
@@ -515,7 +515,7 @@ function drawThermoConstraint(
 ): void {
   if (cells.length < 1) return;
   const color = style.color || THERMO_DEFAULT_STYLE.color;
-  const thickness = Math.max(4, Math.min(30, style.thickness ?? THERMO_DEFAULT_STYLE.thickness));
+  const thickness = Math.max(0, Math.min(100, style.thickness ?? THERMO_DEFAULT_STYLE.thickness));
   const lineWidth = layout.cell * (thickness / 100);
   const start = cellCenter(layout, cells[0][0], cells[0][1]);
   ctx.strokeStyle = color;
@@ -543,7 +543,7 @@ function drawArrowConstraint(
   const { cell } = layout;
   const first = cellCenter(layout, cells[0][0], cells[0][1]);
   const color = style.color || ARROW_DEFAULT_STYLE.color;
-  const thickness = Math.max(4, Math.min(30, style.thickness ?? ARROW_DEFAULT_STYLE.thickness));
+  const thickness = Math.max(0, Math.min(100, style.thickness ?? ARROW_DEFAULT_STYLE.thickness));
   const strokeWidth = cell * (thickness / 100);
 
   // 先画线路，再用白色圆底遮住圆内部分，让线路从圆边缘自然伸出。
@@ -587,7 +587,7 @@ function drawVariantLine(
   if (cells.length < 1) return;
   const points = cells.map(([r, c]) => cellCenter(layout, r, c));
   const color = style.color || LINE_DEFAULT_COLORS[kind];
-  const thickness = Math.max(4, Math.min(30, style.thickness ?? 10));
+  const thickness = Math.max(0, Math.min(100, style.thickness ?? 10));
   const lineWidth = layout.cell * ((thickness + (preview ? 2 : 0)) / 100);
   const trace = () => {
     ctx.beginPath();
@@ -762,7 +762,7 @@ function drawEdgeDecoration(
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-  } else if ("text" in decoration) {
+  } else if (decoration.kind === "cross") {
     ctx.beginPath();
     ctx.moveTo(x - size, y - size);
     ctx.lineTo(x + size, y + size);
@@ -1010,8 +1010,10 @@ function drawCellDecoration(
     const length = Math.hypot(rawX, rawY) || 1;
     const ux = rawX / length;
     const uy = rawY / length;
-    const tipX = x + ux * cell * 0.28;
-    const tipY = y + uy * cell * 0.28;
+    // 斜向箭头沿对角线延伸（用未归一化的 rawX/rawY），视觉长度为水平 / 竖直
+    // 箭头的 √2 倍，使斜向箭头同样“顶到”格子角，保持视觉统一。
+    const tipX = x + rawX * cell * 0.28;
+    const tipY = y + rawY * cell * 0.28;
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(tipX, tipY);
