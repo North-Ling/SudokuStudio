@@ -134,6 +134,7 @@ export function createEmptyPuzzle(
     xSums: [],
     littleKillers: [],
     solveLines: [],
+    disabledRuleKeys: [],
   };
 }
 
@@ -247,6 +248,9 @@ export function deserializePuzzle(json: string): Puzzle {
     littleKillers: ((data.littleKillers ?? []) as SerializedLittleKiller[])
       .map((clue) => normalizeLittleKiller(clue, grid))
       .filter((clue): clue is LittleKillerClue => clue != null),
+    disabledRuleKeys: Array.isArray(data.disabledRuleKeys)
+      ? data.disabledRuleKeys.map(String)
+      : [],
   };
   return merged as Puzzle;
 }

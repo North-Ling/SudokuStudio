@@ -57,6 +57,7 @@ import {
   vxSymbol,
 } from "./model";
 import { History } from "./history";
+import { findViolatedRules } from "./constraintValidation";
 import { render, type RenderOpts } from "./renderer";
 
 export type ToolMode =
@@ -235,6 +236,9 @@ export class App {
   private edgeStroke: EdgeStroke | null = null;
   private cageStrokeAction: "add" | "remove" | null = null;
   private lastCustomCell: CellRef | null = null;
+  private lastFilledCells: CellRef[] = [];
+  private constraintConflicts: CellRef[] = [];
+  private violatedRuleKeys: string[] = [];
 
   constructor(puzzle: Puzzle) {
     this.base = clonePuzzle(puzzle);
@@ -292,6 +296,7 @@ export class App {
 
   render(): void {
     if (!this.ctx) return;
+    this.computeConstraintConflicts();
     const opts: RenderOpts = {
       selection: this.selection,
       selectedCells: this.selectedCells,
@@ -303,8 +308,29 @@ export class App {
       pendingCustomCell: this.lastCustomCell,
       pendingCustomColor: this.lineColor,
       pendingCustomThickness: this.lineThickness,
+      constraintConflicts: this.constraintConflicts,
     };
     render(this.ctx, this.puzzle, this.layout, opts);
+  }
+
+  /** 局部判错：只针对最近填入的格子，标记违反的约束规则。 */
+  private computeConstraintConflicts(): void {
+    this.constraintConflicts = [];
+    this.violatedRuleKeys = [];
+    const disabled = new Set(this.puzzle.disabledRuleKeys ?? []);
+    const violated = new Set<string>();
+    for (const [r, c] of this.lastFilledCells) {
+      const rules = findViolatedRules(this.puzzle, [r, c], disabled);
+      if (rules.length > 0) {
+        this.constraintConflicts.push([r, c]);
+        for (const key of rules) violated.add(key);
+      }
+    }
+    this.violatedRuleKeys = Array.from(violated);
+  }
+
+  getViolatedRuleKeys(): string[] {
+    return this.violatedRuleKeys;
   }
 
   private highlightValue(): CellToken {
@@ -423,6 +449,7 @@ export class App {
     this.pendingPath = null;
     this.pendingCustomEdges = null;
     this.lastCustomCell = null;
+    this.lastFilledCells = [];
     this.render();
   }
 
@@ -431,6 +458,7 @@ export class App {
     const prev = this.history.undo(this.puzzle);
     if (prev) {
       this.puzzle = prev;
+      this.lastFilledCells = [];
       this.render();
     }
   }
@@ -439,6 +467,7 @@ export class App {
     const next = this.history.redo(this.puzzle);
     if (next) {
       this.puzzle = next;
+      this.lastFilledCells = [];
       this.render();
     }
   }
@@ -460,6 +489,7 @@ export class App {
     this.pendingCage = null;
     this.pendingCageId = null;
     this.pendingPath = null;
+    this.lastFilledCells = [];
     this.render();
   }
 
@@ -473,6 +503,7 @@ export class App {
       this.pendingCage = null;
       this.pendingCageId = null;
       this.pendingPath = null;
+      this.lastFilledCells = [];
       this.render();
       return;
     }
@@ -494,6 +525,7 @@ export class App {
     this.pendingCage = null;
     this.pendingCageId = null;
     this.pendingPath = null;
+    this.lastFilledCells = [];
     this.render();
   }
 
@@ -508,6 +540,7 @@ export class App {
     this.pendingCage = null;
     this.pendingCageId = null;
     this.pendingPath = null;
+    this.lastFilledCells = [];
     this.render();
   }
 
@@ -525,6 +558,18 @@ export class App {
   setPuzzleDifficulty(value: number): void {
     if (this.mode !== "edit" || !Number.isFinite(value)) return;
     this.puzzle.difficulty = Math.max(0, Math.min(5, Math.round(value * 2) / 2));
+    this.render();
+  }
+
+  /** 切换某个约束规则是否参与自动判错（作者可禁用约定俗成符号的自定义用法）。 */
+  toggleRuleValidation(key: string): void {
+    if (this.mode !== "edit") return;
+    this.history.snapshot(this.puzzle);
+    const keys = this.puzzle.disabledRuleKeys ?? [];
+    const index = keys.indexOf(key);
+    if (index >= 0) keys.splice(index, 1);
+    else keys.push(key);
+    this.puzzle.disabledRuleKeys = keys;
     this.render();
   }
 
@@ -631,6 +676,7 @@ export class App {
     cell.given = this.mode === "edit";
     cell.corner = [];
     cell.center = [];
+    this.lastFilledCells = [[r, c]];
     this.clearPeersMarks(r, c, token);
     this.render();
   }
@@ -652,6 +698,7 @@ export class App {
     cell.given = false;
     cell.corner = [];
     cell.center = [];
+    this.lastFilledCells = [];
     this.render();
   }
 
@@ -698,7 +745,10 @@ export class App {
       cell.center = [];
     }
     if (!remove) {
+      this.lastFilledCells = targets.map(([r, c]) => [r, c] as CellRef);
       for (const [r, c] of targets) this.clearPeersMarks(r, c, token);
+    } else {
+      this.lastFilledCells = [];
     }
     this.render();
   }

@@ -88,6 +88,8 @@ export interface RenderOpts {
   pendingCustomColor?: string;
   /** 自由线预览粗细（相对单元格百分比） */
   pendingCustomThickness?: number;
+  /** 违反约束的格子（只标最近填入的），用橙色标红。 */
+  constraintConflicts?: CellRef[];
   /** 导出图片时可关闭编辑器的自动判错高亮。 */
   showConflicts?: boolean;
 }
@@ -102,6 +104,9 @@ const COLORS = {
   conflictDigit: "#dc2626",
   conflictFill: "rgba(239,68,68,0.2)",
   conflictBorder: "rgba(220,38,38,0.82)",
+  constraintDigit: "#ea580c",
+  constraintFill: "rgba(249,115,22,0.2)",
+  constraintBorder: "rgba(234,88,12,0.85)",
   pencil: "#6b7280",
   selection: "#2563eb",
   sameDigitFill: "rgba(96,165,250,0.22)",
@@ -148,10 +153,14 @@ export function render(
   const standardConflicts = opts.showConflicts === false
     ? new Set<string>()
     : findStandardRuleConflicts(puzzle);
+  const constraintConflicts = new Set(
+    (opts.constraintConflicts ?? []).map(([r, c]) => `${r},${c}`)
+  );
 
   drawCellFills(ctx, puzzle, layout);
   drawSameDigit(ctx, puzzle, layout, opts.highlightValue);
   drawStandardConflicts(ctx, layout, standardConflicts);
+  drawConstraintConflicts(ctx, layout, constraintConflicts);
   drawGridLines(ctx, puzzle, layout);
   // 约束线高于基础网格，但低于笼框、边/点符号和数字。
   drawGlobalConstraints(ctx, puzzle, layout);
@@ -169,7 +178,7 @@ export function render(
   drawHover(ctx, layout, opts.hover);
   drawSelection(ctx, layout, opts.selectedCells ?? [], opts.selection);
   drawMarks(ctx, puzzle, layout);
-  drawDigits(ctx, puzzle, layout, standardConflicts);
+  drawDigits(ctx, puzzle, layout, standardConflicts, constraintConflicts);
 }
 
 function drawStandardConflicts(
@@ -191,6 +200,30 @@ function drawStandardConflicts(
       rect.y + cell * 0.055,
       rect.w - cell * 0.11,
       rect.h - cell * 0.11,
+    );
+  }
+}
+
+/** 约束冲突（橙色）：只标最近填入、导致约束不成立的格子。 */
+function drawConstraintConflicts(
+  ctx: CanvasRenderingContext2D,
+  layout: Layout,
+  conflicts: Set<string>,
+): void {
+  if (conflicts.size === 0) return;
+  const { cell } = layout;
+  for (const key of conflicts) {
+    const [r, c] = key.split(",").map(Number);
+    const rect = cellRect(layout, r, c);
+    ctx.fillStyle = COLORS.constraintFill;
+    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+    ctx.strokeStyle = COLORS.constraintBorder;
+    ctx.lineWidth = Math.max(1.5, cell * 0.05);
+    ctx.strokeRect(
+      rect.x + cell * 0.045,
+      rect.y + cell * 0.045,
+      rect.w - cell * 0.09,
+      rect.h - cell * 0.09,
     );
   }
 }
@@ -1101,6 +1134,7 @@ function drawDigits(
   p: Puzzle,
   layout: Layout,
   conflicts: Set<string>,
+  constraintConflicts: Set<string>,
 ): void {
   const { cell } = layout;
   const fontSize = cell * 0.62;
@@ -1114,7 +1148,9 @@ function drawDigits(
         ctx.font = `${given ? 600 : 500} ${fontSize}px ${FONT}`;
         ctx.fillStyle = conflicts.has(`${r},${c}`)
           ? COLORS.conflictDigit
-          : given ? COLORS.givenDigit : COLORS.filledDigit;
+          : constraintConflicts.has(`${r},${c}`)
+            ? COLORS.constraintDigit
+            : given ? COLORS.givenDigit : COLORS.filledDigit;
         ctx.fillText(String(cellData.value), x, y + cell * 0.02);
       }
     }

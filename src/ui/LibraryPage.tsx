@@ -35,9 +35,7 @@ export function LibraryPage({ currentEntryId, openEntry, onDelete }: LibraryPage
   return <main className="library-page">
     <section className="library-page-header">
       <div>
-        <div className="library-kicker">PUZZLE LIBRARY</div>
-        <h1>数独题库</h1>
-        <p>浏览内置示例和保存在当前浏览器中的题目，直接进入解题或继续编辑。</p>
+        <div className="library-kicker">题库</div>
       </div>
       <div className="library-stats">
         <div><strong>{entries.length}</strong><span>全部题目</span></div>
@@ -74,14 +72,14 @@ export function LibraryPage({ currentEntryId, openEntry, onDelete }: LibraryPage
               {entry.id === currentEntryId && <span className="current-badge">当前题目</span>}
             </div>
             <h2>{entry.puzzle.title || "未命名题目"}</h2>
-            <div className="library-card-meta">
+            {/* <div className="library-card-meta">
               <span>{entry.puzzle.grid.rows}×{entry.puzzle.grid.cols}</span>
               <span>{entry.puzzle.grid.regionMode === "standard"
                 ? `${entry.puzzle.grid.boxRows}×${entry.puzzle.grid.boxCols} 宫`
                 : "无标准宫"}</span>
-            </div>
+            </div> */}
             <DifficultyStars value={entry.puzzle.difficulty} compact />
-            <p>{entry.puzzle.rules?.trim() || "标准数独规则适用"}</p>
+            <div><p>{entry.puzzle.rules?.trim() || "标准数独规则适用"}</p></div>
             {automaticRules.length > 0 && <div className="library-rule-tags">
               {automaticRules.slice(0, 4).map((rule) => <span key={rule.key}>{rule.label}</span>)}
               {automaticRules.length > 4 && <span>+{automaticRules.length - 4}</span>}

@@ -241,4 +241,6 @@ export interface Puzzle {
   littleKillers: LittleKillerClue[];
   /** 解题模式下绘制的自由草稿线，不随题面导出。 */
   solveLines: LineConstraint[];
+  /** 被作者禁用自动判错的规则 key 列表（对应约束介绍卡片）。 */
+  disabledRuleKeys: string[];
 }

@@ -4,6 +4,7 @@ import { savePuzzleToLibrary, type PuzzleLibraryEntry } from "../library";
 import type { Puzzle } from "../types";
 import { validationDescription } from "../grid";
 import { deriveAutomaticRuleDescriptions } from "../constraintRules";
+import { validatableRuleKeys } from "../constraintValidation";
 import { BoardCanvas } from "./BoardCanvas";
 import { DifficultyStars } from "./DifficultyStars";
 import { LibraryPage } from "./LibraryPage";
@@ -174,7 +175,7 @@ function PuzzleInfo({ app, sync, focusTitleToken }: { app: App; sync: () => void
         {/* <div className="grid-badge">{app.puzzle.grid.rows}×{app.puzzle.grid.cols}{app.puzzle.grid.regionMode === "standard" ? ` · ${app.puzzle.grid.boxRows}×${app.puzzle.grid.boxCols} 宫` : " · 无标准宫"}</div> */}
         <DifficultyStars value={app.puzzle.difficulty} compact />
         <p>{rules}</p>
-        {automaticRules.length > 0 && <AutomaticRules rules={automaticRules} />}
+        {automaticRules.length > 0 && <AutomaticRules rules={automaticRules} violatedKeys={new Set(app.getViolatedRuleKeys())} />}
         {customLineDescriptions.map((description) => (
           <p key={description} className="custom-line-rule">自定义线：{description}</p>
         ))}
@@ -210,19 +211,39 @@ function PuzzleInfo({ app, sync, focusTitleToken }: { app: App; sync: () => void
         <div className="automatic-rules-editor">
           {/* <div><strong>自动约束描述</strong><span>随题面约束实时更新，不修改上方手写文本</span></div> */}
           {automaticRules.length > 0
-            ? <AutomaticRules rules={automaticRules} />
+            ? <AutomaticRules rules={automaticRules} editable app={app} sync={sync} />
             : <div className="automatic-rules-empty"></div>}
         </div>
       </div>}
   </section>;
 }
 
-function AutomaticRules({ rules }: { rules: ReturnType<typeof deriveAutomaticRuleDescriptions> }) {
+function AutomaticRules({ rules, editable = false, violatedKeys, app, sync }: {
+  rules: ReturnType<typeof deriveAutomaticRuleDescriptions>;
+  editable?: boolean;
+  violatedKeys?: Set<string>;
+  app?: App;
+  sync?: () => void;
+}) {
+  const validatable = new Set(validatableRuleKeys());
   return <div className="automatic-rules">
-    {rules.map((rule) => <div key={rule.key}>
-      <strong>{rule.label}</strong>
-      <span>{rule.description}</span>
-    </div>)}
+    {rules.map((rule) => {
+      const isViolated = violatedKeys?.has(rule.key) ?? false;
+      const isDisabled = editable && app
+        ? (app.puzzle.disabledRuleKeys ?? []).includes(rule.key)
+        : false;
+      const canToggle = validatable.has(rule.key);
+      return <div key={rule.key} className={`automatic-rule${isViolated ? " violated" : ""}${isDisabled ? " disabled" : ""}`}>
+        <div className="automatic-rule-head">
+          <strong>{rule.label}</strong>
+          {editable && canToggle && <label className="rule-toggle" title="启用 / 禁用该约束的自动判错">
+            <input type="checkbox" checked={!isDisabled} onChange={() => { app?.toggleRuleValidation(rule.key); sync?.(); }} />
+          </label>}
+          {!editable && isViolated && <span className="rule-alert" title="此约束不成立">!</span>}
+        </div>
+        <span className="automatic-rule-desc">{rule.description}</span>
+      </div>;
+    })}
   </div>;
 }
 

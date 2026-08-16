@@ -4,7 +4,6 @@ import {
   createGridSpec,
   STANDARD_GRID_PRESETS,
   standardPresetFor,
-  validationDescription,
 } from "../grid";
 import { createPuzzleCardBlob, downloadBlob, puzzleCardFilename } from "../puzzleCard";
 import type { GridSpec, Puzzle } from "../types";
@@ -43,37 +42,29 @@ export function NewPuzzleModal({ close, create }: NewPuzzleModalProps) {
   };
 
   return <ModalFrame title="新建题目 · 选择数独样式" close={close}>
-    <div className="new-puzzle-section">
-      <div className="new-puzzle-label">标准大小</div>
-      <div className="preset-grid">
-        {STANDARD_GRID_PRESETS.map((item) => (
-          <button
-            key={item.size}
-            className={rows === item.size && cols === item.size ? "active" : ""}
-            onClick={() => {
-              setRows(item.size);
-              setCols(item.size);
-              setStandardRegions(true);
-            }}
-          >
-            <strong>{item.size}×{item.size}</strong>
-            <small>{item.boxRows}×{item.boxCols} 宫</small>
-          </button>
-        ))}
-      </div>
-    </div>
-
-    <div className="new-puzzle-section">
-      <div className="new-puzzle-label">自定义网格</div>
-      <div className="dimension-row">
-        <label>行数
-          <input type="number" min={1} max={16} value={rows} onChange={(event) => setDimension(Number(event.target.value), setRows)} />
-        </label>
-        <span>×</span>
-        <label>列数
-          <input type="number" min={1} max={16} value={cols} onChange={(event) => setDimension(Number(event.target.value), setCols)} />
-        </label>
-      </div>
+    <div className="new-puzzle-size-row">
+      {STANDARD_GRID_PRESETS.map((item) => (
+        <button
+          key={item.size}
+          className={rows === item.size && cols === item.size ? "active" : ""}
+          onClick={() => {
+            setRows(item.size);
+            setCols(item.size);
+            setStandardRegions(true);
+          }}
+        >
+          <strong>{item.size}×{item.size}</strong>
+          <small>{item.boxRows}×{item.boxCols} 宫</small>
+        </button>
+      ))}
+      <label className="size-input">
+        <span>行数</span>
+        <input type="number" min={1} max={16} value={rows} onChange={(event) => setDimension(Number(event.target.value), setRows)} />
+      </label>
+      <label className="size-input">
+        <span>列数</span>
+        <input type="number" min={1} max={16} value={cols} onChange={(event) => setDimension(Number(event.target.value), setCols)} />
+      </label>
     </div>
 
     {preset
@@ -88,11 +79,11 @@ export function NewPuzzleModal({ close, create }: NewPuzzleModalProps) {
         非标准比例按自由网格创建，不绘制标准宫，也不启用自动判错。
       </div>}
 
-    <div className="grid-summary">
+    {/* <div className="grid-summary">
       <strong>{grid.rows}×{grid.cols}</strong>
       <span>{grid.regionMode === "standard" ? `${grid.boxRows}×${grid.boxCols} 标准宫` : "无标准宫"}</span>
       <span>{validationDescription(grid)}</span>
-    </div>
+    </div> */}
 
     <div className="modal-actions">
       <button onClick={close}>取消</button>
