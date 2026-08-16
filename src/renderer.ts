@@ -90,6 +90,8 @@ export interface RenderOpts {
   pendingCustomThickness?: number;
   /** 违反约束的格子（只标最近填入的），用橙色标红。 */
   constraintConflicts?: CellRef[];
+  /** 违反约束的候选字符：cellKey -> 冲突 token 集合（仅变色）。 */
+  conflictingCandidates?: Map<string, Set<string>>;
   /** 导出图片时可关闭编辑器的自动判错高亮。 */
   showConflicts?: boolean;
 }
@@ -177,7 +179,7 @@ export function render(
   drawCellDecorations(ctx, puzzle, layout);
   drawHover(ctx, layout, opts.hover);
   drawSelection(ctx, layout, opts.selectedCells ?? [], opts.selection);
-  drawMarks(ctx, puzzle, layout);
+  drawMarks(ctx, puzzle, layout, opts.conflictingCandidates);
   drawDigits(ctx, puzzle, layout, standardConflicts, constraintConflicts);
 }
 
@@ -511,13 +513,13 @@ function drawCageBorders(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layou
       ? (cage.text ?? "")
       : `${prefix}${cage.sum == null ? "?" : cage.sum}`;
     if (!label) continue;
-    const inset = cell * 0.1;
+    const inset = cell * 0.12;
     const fontSizePct = Math.max(10, Math.min(50, cage.fontSize ?? 20));
     const fontSize = Math.max(8, cell * (fontSizePct / 100));
     ctx.font = `600 ${fontSize}px ${FONT}`;
     const tw = ctx.measureText(label).width;
-    const px = rect.x + inset + tw / 2 + fontSize * 0.2;
-    const py = rect.y + inset + fontSize * 0.52;
+    const px = rect.x + inset + tw / 2 + fontSize * 0.18;
+    const py = rect.y + inset + fontSize * 0.58;
     // 白色底衬
     ctx.fillStyle = "#ffffff";
     roundRectPath(
@@ -1158,7 +1160,12 @@ function drawDigits(
 }
 
 // ---- 候选数（角标 / 中标） ----
-function drawMarks(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layout): void {
+function drawMarks(
+  ctx: CanvasRenderingContext2D,
+  p: Puzzle,
+  layout: Layout,
+  conflictingCandidates?: Map<string, Set<string>>,
+): void {
   const { cell } = layout;
   const palette = gridTokens(p.grid);
   const candidateShape = candidateGridShape(p.grid);
@@ -1167,13 +1174,13 @@ function drawMarks(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layout): vo
       const cellData = p.cells[r][c];
       if (cellData.value !== "") continue;
       const rect = cellRect(layout, r, c);
+      const conflicting = conflictingCandidates?.get(`${r},${c}`) ?? new Set<string>();
 
       if (cellData.center.length > 0) {
         const slotW = cell / candidateShape.cols;
         const slotH = cell / candidateShape.rows;
         const fontSize = Math.min(slotW, slotH) * 0.62;
         ctx.font = `400 ${fontSize}px ${FONT}`;
-        ctx.fillStyle = COLORS.pencil;
         cellData.center.forEach((token, index) => {
           const tokenPosition = palette.indexOf(token.toUpperCase());
           const position = tokenPosition >= 0
@@ -1181,6 +1188,7 @@ function drawMarks(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layout): vo
             : index % (candidateShape.rows * candidateShape.cols);
           const dr = Math.floor(position / candidateShape.cols);
           const dc = position % candidateShape.cols;
+          ctx.fillStyle = conflicting.has(token) ? COLORS.constraintDigit : COLORS.pencil;
           ctx.fillText(
             token,
             rect.x + (dc + 0.5) * slotW,
@@ -1197,13 +1205,19 @@ function drawMarks(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layout): vo
           : [text.slice(0, Math.ceil(text.length / 2)), text.slice(Math.ceil(text.length / 2))];
         const fontSize = cell * (lines.length === 1 ? 0.22 : 0.19);
         ctx.font = `400 ${fontSize}px ${FONT}`;
-        ctx.fillStyle = COLORS.pencil;
         const centerX = rect.x + cell / 2;
         const centerY = rect.y + cell / 2;
         const lineHeight = fontSize * 1.08;
-        lines.forEach((line, index) => {
-          const offset = (index - (lines.length - 1) / 2) * lineHeight;
-          ctx.fillText(line, centerX, centerY + offset, cell * 0.78);
+        lines.forEach((line, lineIndex) => {
+          const offset = (lineIndex - (lines.length - 1) / 2) * lineHeight;
+          const lineWidth = ctx.measureText(line).width;
+          let x = centerX - lineWidth / 2;
+          for (const ch of Array.from(line)) {
+            const chWidth = ctx.measureText(ch).width;
+            ctx.fillStyle = conflicting.has(ch) ? COLORS.constraintDigit : COLORS.pencil;
+            ctx.fillText(ch, x + chWidth / 2, centerY + offset);
+            x += chWidth;
+          }
         });
       }
     }

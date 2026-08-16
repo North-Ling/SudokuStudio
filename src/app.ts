@@ -57,7 +57,7 @@ import {
   vxSymbol,
 } from "./model";
 import { History } from "./history";
-import { findViolatedRules } from "./constraintValidation";
+import { findViolatedRules, hasStandardPeerConflict } from "./constraintValidation";
 import { render, type RenderOpts } from "./renderer";
 
 export type ToolMode =
@@ -239,6 +239,8 @@ export class App {
   private lastFilledCells: CellRef[] = [];
   private constraintConflicts: CellRef[] = [];
   private violatedRuleKeys: string[] = [];
+  private conflictingCandidates: Map<string, Set<string>> = new Map();
+  private candidatesDirty = true;
 
   constructor(puzzle: Puzzle) {
     this.base = clonePuzzle(puzzle);
@@ -309,11 +311,12 @@ export class App {
       pendingCustomColor: this.lineColor,
       pendingCustomThickness: this.lineThickness,
       constraintConflicts: this.constraintConflicts,
+      conflictingCandidates: this.conflictingCandidates,
     };
     render(this.ctx, this.puzzle, this.layout, opts);
   }
 
-  /** 局部判错：只针对最近填入的格子，标记违反的约束规则。 */
+  /** 局部判错：针对最近填入的格子标记违反规则；候选冲突按需重算。 */
   private computeConstraintConflicts(): void {
     this.constraintConflicts = [];
     this.violatedRuleKeys = [];
@@ -327,6 +330,35 @@ export class App {
       }
     }
     this.violatedRuleKeys = Array.from(violated);
+
+    if (this.candidatesDirty) {
+      this.recomputeCandidateConflicts(disabled);
+      this.candidatesDirty = false;
+    }
+  }
+
+  /** 角标 / 中标候选：模拟填入后若违反约束，标记该候选（仅变色）。 */
+  private recomputeCandidateConflicts(disabled: Set<string>): void {
+    this.conflictingCandidates = new Map();
+    for (let r = 0; r < this.puzzle.grid.rows; r++) {
+      for (let c = 0; c < this.puzzle.grid.cols; c++) {
+        const cell = this.puzzle.cells[r][c];
+        if (cell.value !== "") continue;
+        const tokens = Array.from(new Set([...cell.corner, ...cell.center]));
+        if (tokens.length === 0) continue;
+        for (const token of tokens) {
+          cell.value = token;
+          const rules = findViolatedRules(this.puzzle, [r, c], disabled);
+          cell.value = "";
+          if (rules.length > 0 || hasStandardPeerConflict(this.puzzle, r, c, token)) {
+            const key = `${r},${c}`;
+            let set = this.conflictingCandidates.get(key);
+            if (!set) { set = new Set(); this.conflictingCandidates.set(key, set); }
+            set.add(token);
+          }
+        }
+      }
+    }
   }
 
   getViolatedRuleKeys(): string[] {
@@ -450,6 +482,7 @@ export class App {
     this.pendingCustomEdges = null;
     this.lastCustomCell = null;
     this.lastFilledCells = [];
+    this.candidatesDirty = true;
     this.render();
   }
 
@@ -459,6 +492,7 @@ export class App {
     if (prev) {
       this.puzzle = prev;
       this.lastFilledCells = [];
+      this.candidatesDirty = true;
       this.render();
     }
   }
@@ -468,6 +502,7 @@ export class App {
     if (next) {
       this.puzzle = next;
       this.lastFilledCells = [];
+      this.candidatesDirty = true;
       this.render();
     }
   }
@@ -490,6 +525,7 @@ export class App {
     this.pendingCageId = null;
     this.pendingPath = null;
     this.lastFilledCells = [];
+    this.candidatesDirty = true;
     this.render();
   }
 
@@ -526,6 +562,7 @@ export class App {
     this.pendingCageId = null;
     this.pendingPath = null;
     this.lastFilledCells = [];
+    this.candidatesDirty = true;
     this.render();
   }
 
@@ -541,6 +578,7 @@ export class App {
     this.pendingCageId = null;
     this.pendingPath = null;
     this.lastFilledCells = [];
+    this.candidatesDirty = true;
     this.render();
   }
 
@@ -677,6 +715,7 @@ export class App {
     cell.corner = [];
     cell.center = [];
     this.lastFilledCells = [[r, c]];
+    this.candidatesDirty = true;
     this.clearPeersMarks(r, c, token);
     this.render();
   }
@@ -699,6 +738,7 @@ export class App {
     cell.corner = [];
     cell.center = [];
     this.lastFilledCells = [];
+    this.candidatesDirty = true;
     this.render();
   }
 
@@ -707,6 +747,7 @@ export class App {
     if (this.mode === "solve" && cell.given) return;
     this.history.snapshot(this.puzzle);
     cell.corner = toggleInList(cell.corner, token);
+    this.candidatesDirty = true;
     this.render();
   }
 
@@ -715,6 +756,7 @@ export class App {
     if (this.mode === "solve" && cell.given) return;
     this.history.snapshot(this.puzzle);
     cell.center = toggleInList(cell.center, token);
+    this.candidatesDirty = true;
     this.render();
   }
 
@@ -750,6 +792,7 @@ export class App {
     } else {
       this.lastFilledCells = [];
     }
+    this.candidatesDirty = true;
     this.render();
   }
 
@@ -766,6 +809,7 @@ export class App {
         ? cell[kind].filter((item) => item !== token)
         : cell[kind].includes(token) ? cell[kind] : toggleInList(cell[kind], token);
     }
+    this.candidatesDirty = true;
     this.render();
   }
 
@@ -905,6 +949,7 @@ export class App {
     }
     cell.colors = [];
     if (this.mode === "edit") cell.decorations = [];
+    this.candidatesDirty = true;
     this.render();
   }
 
@@ -2040,6 +2085,7 @@ export class App {
       else if (this.tool === "color") cell.colors = [];
       else if (this.tool === "cell-shape" && this.mode === "edit") cell.decorations = [];
     }
+    this.candidatesDirty = true;
     this.render();
   }
 

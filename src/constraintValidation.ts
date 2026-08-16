@@ -1,6 +1,9 @@
+import { littleKillerTargetVertex } from "./geometry";
 import type {
   CellRef,
+  DiagonalDirection,
   EdgeData,
+  GridSide,
   LineConstraint,
   LookoutAnchor,
   Puzzle,
@@ -22,6 +25,35 @@ function num(p: Puzzle, r: number, c: number): number | null {
   if (v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * 标准数独基础判错：给定格子的候选 token，是否与同行 / 列 / 宫的确定数字重复。
+ * 用于候选（角标 / 中标）的可行性提示。
+ */
+export function hasStandardPeerConflict(
+  p: Puzzle,
+  r: number,
+  c: number,
+  token: string,
+): boolean {
+  const { rows, cols, validationMode, boxRows, boxCols } = p.grid;
+  for (let cc = 0; cc < cols; cc++) {
+    if (cc !== c && p.cells[r][cc].value === token) return true;
+  }
+  for (let rr = 0; rr < rows; rr++) {
+    if (rr !== r && p.cells[rr][c].value === token) return true;
+  }
+  if (validationMode === "row-column-region" && boxRows && boxCols) {
+    const br = Math.floor(r / boxRows) * boxRows;
+    const bc = Math.floor(c / boxCols) * boxCols;
+    for (let rr = br; rr < br + boxRows; rr++) {
+      for (let cc = bc; cc < bc + boxCols; cc++) {
+        if ((rr !== r || cc !== c) && p.cells[rr][cc].value === token) return true;
+      }
+    }
+  }
+  return false;
 }
 
 function lineContains(line: LineConstraint, r: number, c: number): boolean {
@@ -243,6 +275,81 @@ function checkLine(p: Puzzle, line: LineConstraint, r: number, c: number): boole
     return false;
   }
 
+  if (line.kind === "renban") {
+    const seen = new Set<number>();
+    const values: number[] = [];
+    for (const [cr, cc] of cells) {
+      const v = num(p, cr, cc);
+      if (v == null) continue;
+      if (seen.has(v)) return true;
+      seen.add(v);
+      values.push(v);
+    }
+    if (values.length >= 2) {
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      if (max - min + 1 > n) return true;
+    }
+    return false;
+  }
+
+  if (line.kind === "entropy") {
+    for (let start = Math.max(0, idx - 2); start <= Math.min(idx, n - 3); start++) {
+      const bands: number[] = [];
+      for (let k = start; k < start + 3; k++) {
+        const v = num(p, cells[k][0], cells[k][1]);
+        if (v == null) continue;
+        bands.push(v <= 3 ? 0 : v <= 6 ? 1 : 2);
+      }
+      if (new Set(bands).size !== bands.length) return true;
+    }
+    return false;
+  }
+
+  if (line.kind === "region-sum") {
+    const { boxRows, boxCols } = p.grid;
+    if (!boxRows || !boxCols) return false;
+    const groups = new Map<string, { sum: number; complete: boolean }>();
+    for (const [cr, cc] of cells) {
+      const key = `${Math.floor(cr / boxRows)},${Math.floor(cc / boxCols)}`;
+      const g = groups.get(key) ?? { sum: 0, complete: true };
+      const v = num(p, cr, cc);
+      if (v == null) g.complete = false;
+      else g.sum += v;
+      groups.set(key, g);
+    }
+    const full: number[] = [];
+    for (const g of groups.values()) {
+      if (g.complete) full.push(g.sum);
+    }
+    for (let i = 1; i < full.length; i++) {
+      if (full[i] !== full[0]) return true;
+    }
+    return false;
+  }
+
+  if (line.kind === "ten-sum") {
+    let sum = 0;
+    for (const [cr, cc] of cells) {
+      const v = num(p, cr, cc);
+      if (v == null) { sum = 0; continue; }
+      sum += v;
+      if (sum > 10) return true;
+      if (sum === 10) sum = 0;
+    }
+    return false;
+  }
+
+  if (line.kind === "anti-factor") {
+    const len = n;
+    for (const [cr, cc] of cells) {
+      const v = num(p, cr, cc);
+      if (v == null || v === 1) continue;
+      if (len % v === 0 || v % len === 0) return true;
+    }
+    return false;
+  }
+
   return false;
 }
 
@@ -310,6 +417,96 @@ function checkLookout(p: Puzzle, r: number, c: number, disabled: Set<string>): s
 }
 
 // ----------------------------------------------------------------------------
+// 盘外约束（摩天楼 / X 和 / 小杀手）
+// ----------------------------------------------------------------------------
+
+function skyscraperCells(p: Puzzle, side: GridSide, index: number): CellRef[] {
+  const { rows, cols } = p.grid;
+  const cells: CellRef[] = [];
+  if (side === "top") for (let r = 0; r < rows; r++) cells.push([r, index]);
+  else if (side === "bottom") for (let r = rows - 1; r >= 0; r--) cells.push([r, index]);
+  else if (side === "left") for (let c = 0; c < cols; c++) cells.push([index, c]);
+  else for (let c = cols - 1; c >= 0; c--) cells.push([index, c]);
+  return cells;
+}
+
+function countVisible(values: number[]): number {
+  let visible = 0;
+  let max = 0;
+  for (const v of values) {
+    if (v > max) { visible++; max = v; }
+  }
+  return visible;
+}
+
+function littleKillerCells(
+  p: Puzzle,
+  anchor: { r: number; c: number },
+  direction: DiagonalDirection,
+): CellRef[] {
+  const target = littleKillerTargetVertex(anchor, direction, p.grid.rows, p.grid.cols);
+  if (!target) return [];
+  const diagonalRC = direction === "down-right" || direction === "up-left";
+  const constant = diagonalRC ? target.r - target.c : target.r + target.c;
+  const cells: CellRef[] = [];
+  for (let r = 0; r < p.grid.rows; r++) {
+    for (let c = 0; c < p.grid.cols; c++) {
+      if ((diagonalRC ? r - c : r + c) === constant) cells.push([r, c]);
+    }
+  }
+  return cells;
+}
+
+function checkSkyscraper(p: Puzzle, r: number, c: number, disabled: Set<string>): string | null {
+  if (disabled.has("skyscraper")) return null;
+  for (const clue of p.skyscrapers) {
+    const cells = skyscraperCells(p, clue.side, clue.index);
+    if (!cells.some(([cr, cc]) => cr === r && cc === c)) continue;
+    if (!cells.every(([cr, cc]) => num(p, cr, cc) != null)) continue;
+    const values = cells.map(([cr, cc]) => num(p, cr, cc)!);
+    if (countVisible(values) !== clue.value) return "skyscraper";
+  }
+  return null;
+}
+
+function checkXSum(p: Puzzle, r: number, c: number, disabled: Set<string>): string | null {
+  if (disabled.has("x-sum")) return null;
+  for (const clue of p.xSums) {
+    const cells = skyscraperCells(p, clue.side, clue.index);
+    if (!cells.some(([cr, cc]) => cr === r && cc === c)) continue;
+    const first = num(p, cells[0][0], cells[0][1]);
+    if (first == null || first < 1 || first > cells.length) continue;
+    const prefix = cells.slice(0, first);
+    let sum = 0;
+    let complete = true;
+    for (const [cr, cc] of prefix) {
+      const v = num(p, cr, cc);
+      if (v == null) { complete = false; continue; }
+      sum += v;
+    }
+    if (sum > clue.value || (complete && sum !== clue.value)) return "x-sum";
+  }
+  return null;
+}
+
+function checkLittleKiller(p: Puzzle, r: number, c: number, disabled: Set<string>): string | null {
+  if (disabled.has("little-killer")) return null;
+  for (const clue of p.littleKillers) {
+    const cells = littleKillerCells(p, clue.anchor, clue.direction);
+    if (!cells.some(([cr, cc]) => cr === r && cc === c)) continue;
+    let sum = 0;
+    let complete = true;
+    for (const [cr, cc] of cells) {
+      const v = num(p, cr, cc);
+      if (v == null) { complete = false; continue; }
+      sum += v;
+    }
+    if (sum > clue.value || (complete && sum !== clue.value)) return "little-killer";
+  }
+  return null;
+}
+
+// ----------------------------------------------------------------------------
 // 入口
 // ----------------------------------------------------------------------------
 
@@ -337,6 +534,9 @@ export function findViolatedRules(
   push(checkArrow(puzzle, r, c, disabled));
   push(checkCage(puzzle, r, c, disabled));
   push(checkLookout(puzzle, r, c, disabled));
+  push(checkSkyscraper(puzzle, r, c, disabled));
+  push(checkXSum(puzzle, r, c, disabled));
+  push(checkLittleKiller(puzzle, r, c, disabled));
 
   for (const line of puzzle.lines) {
     if (line.kind === "custom") continue;
@@ -371,5 +571,13 @@ export function validatableRuleKeys(): string[] {
     "line-between",
     "line-palindrome",
     "line-zipper",
+    "line-renban",
+    "line-entropy",
+    "line-region-sum",
+    "line-ten-sum",
+    "line-anti-factor",
+    "skyscraper",
+    "x-sum",
+    "little-killer",
   ];
 }

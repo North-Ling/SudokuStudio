@@ -233,10 +233,13 @@ body {
 .puzzle-heading {
   width: 100%;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .puzzle-heading h1 {
-  margin: 0 0 3px;
+  margin: 0;
   font-size: 17px;
   line-height: 1.25;
 }
@@ -251,7 +254,6 @@ body {
 }
 
 .puzzle-heading .custom-line-rule {
-  margin-top: 4px;
   color: #64748b;
 }
 
@@ -455,9 +457,7 @@ body {
 }
 
 .puzzle-info .automatic-rules {
-  max-height: 210px;
-  overflow-y: auto;
-  padding-right: 2px;
+  margin-top: 0;
 }
 
 .automatic-rules .automatic-rule {
