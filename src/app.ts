@@ -203,6 +203,9 @@ export class App {
   edgeText = "5";
   cornerText = "10";
   cageSum = "";
+  cageText = "";
+  cageColor = "#1f2937";
+  cageFontSize = 20;
   cageRelation: CageRelation = "equal";
   cageError = "";
   lineColor = LINE_DEFAULT_COLORS["region-sum"];
@@ -339,6 +342,9 @@ export class App {
     if (previousTool !== tool && tool === "cage") {
       this.cageRelation = "equal";
       this.cageSum = "";
+      this.cageText = "";
+      this.cageColor = "#1f2937";
+      this.cageFontSize = 20;
       this.cageError = "";
     }
     const selectedPathType = pathTypeForTool(tool);
@@ -1214,6 +1220,9 @@ export class App {
         this.pendingCageId = existing.id;
         this.cageRelation = existing.relation ?? (existing.sum == null ? "none" : "equal");
         this.cageSum = existing.sum == null ? "" : String(existing.sum);
+        this.cageText = existing.text ?? "";
+        this.cageColor = existing.color ?? "#1f2937";
+        this.cageFontSize = existing.fontSize ?? 20;
         this.cageError = isOrthogonallyConnected(existing.cells)
           ? ""
           : "这个旧杀手笼不是连续区域，请调整后再完成。";
@@ -1243,6 +1252,9 @@ export class App {
         this.pendingCageId = existing.id;
         this.cageRelation = existing.relation ?? (existing.sum == null ? "none" : "equal");
         this.cageSum = existing.sum == null ? "" : String(existing.sum);
+        this.cageText = existing.text ?? "";
+        this.cageColor = existing.color ?? "#1f2937";
+        this.cageFontSize = existing.fontSize ?? 20;
         this.cageStrokeAction = "remove";
         this.cageError = isOrthogonallyConnected(existing.cells)
           ? ""
@@ -1303,13 +1315,19 @@ export class App {
     const sum = this.cageSum.trim() === "" ? null : Number(this.cageSum);
     if (
       this.cageRelation !== "none" &&
+      this.cageRelation !== "custom" &&
       (sum == null || !Number.isFinite(sum) || sum <= 0)
     ) {
       this.cageError = "请输入有效的正数提示，或选择“空框”。";
       this.render();
       return;
     }
-    const validSum = this.cageRelation === "none" ? null : Math.round(sum as number);
+    const validSum = this.cageRelation === "none" || this.cageRelation === "custom"
+      ? null
+      : Math.round(sum as number);
+    const validText = this.cageRelation === "custom" ? this.cageText : undefined;
+    const validColor = this.cageColor || undefined;
+    const validFontSize = Math.max(10, Math.min(50, Math.round(this.cageFontSize)));
 
     this.history.snapshot(this.puzzle);
     if (this.pendingCageId != null) {
@@ -1318,6 +1336,9 @@ export class App {
         cage.cells = this.pendingCage.map(([r, c]) => [r, c] as CellRef);
         cage.relation = this.cageRelation;
         cage.sum = validSum;
+        cage.text = validText;
+        cage.color = validColor;
+        cage.fontSize = validFontSize;
       }
     } else {
       this.puzzle.cages.push({
@@ -1325,12 +1346,18 @@ export class App {
         cells: this.pendingCage.map(([r, c]) => [r, c] as CellRef),
         relation: this.cageRelation,
         sum: validSum,
+        text: validText,
+        color: validColor,
+        fontSize: validFontSize,
       });
     }
     this.pendingCage = null;
     this.pendingCageId = null;
     this.cageRelation = "equal";
     this.cageSum = "";
+    this.cageText = "";
+    this.cageColor = "#1f2937";
+    this.cageFontSize = 20;
     this.cageError = "";
     this.render();
   }
@@ -1377,6 +1404,9 @@ export class App {
       this.pendingCageId = null;
       this.cageRelation = "equal";
       this.cageSum = "";
+      this.cageText = "";
+      this.cageColor = "#1f2937";
+      this.cageFontSize = 20;
       this.cageError = "";
       this.render();
     }
@@ -1387,6 +1417,9 @@ export class App {
     this.pendingCageId = null;
     this.cageRelation = "equal";
     this.cageSum = "";
+    this.cageText = "";
+    this.cageColor = "#1f2937";
+    this.cageFontSize = 20;
     this.cageError = "";
     this.render();
   }

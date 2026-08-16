@@ -474,9 +474,13 @@ function drawCageBorders(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layou
     const [ar, ac] = cageAnchor(cage.cells);
     const rect = cellRect(layout, ar, ac);
     const prefix = relation === "at-least" ? "≥" : relation === "at-most" ? "≤" : "";
-    const label = `${prefix}${cage.sum == null ? "?" : cage.sum}`;
+    const label = relation === "custom"
+      ? (cage.text ?? "")
+      : `${prefix}${cage.sum == null ? "?" : cage.sum}`;
+    if (!label) continue;
     const inset = cell * 0.1;
-    const fontSize = Math.max(9, cell * 0.26);
+    const fontSizePct = Math.max(10, Math.min(50, cage.fontSize ?? 20));
+    const fontSize = Math.max(8, cell * (fontSizePct / 100));
     ctx.font = `600 ${fontSize}px ${FONT}`;
     const tw = ctx.measureText(label).width;
     const px = rect.x + inset + tw / 2 + fontSize * 0.2;
@@ -492,7 +496,7 @@ function drawCageBorders(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layou
       fontSize * 0.24,
     );
     ctx.fill();
-    ctx.fillStyle = COLORS.text;
+    ctx.fillStyle = cage.color || COLORS.text;
     ctx.fillText(label, px, py);
   }
 }

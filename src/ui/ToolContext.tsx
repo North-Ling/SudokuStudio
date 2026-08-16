@@ -3,6 +3,7 @@ import { isPathTool, pathTypeForTool, type App } from "../app";
 import { COLOR_PALETTE, LINE_RULE_DESCRIPTIONS } from "../model";
 import { candidateGridShape, gridTokens, letterGridTokens, maximumStandardSum, symbolGridTokens } from "../grid";
 import type {
+  CageRelation,
   CellDecoration,
   ColorName,
   DiagonalDirection,
@@ -59,7 +60,7 @@ function CharacterDial({ app, sync }: Props) {
   return <div className="character-dial" aria-label="字符罗盘">
     <div className="selection-summary">
       {app.selection ? `已选择 ${Math.max(1, app.selectedCells.length)} 格` : "请先选择格子"}
-      <span>普通单击重选/取消 · 拖动扩展 · Shift 追加</span>
+      <span>普通单击重选 · 拖动扩展 · Shift 追加</span>
     </div>
     <div className="keypad" role="group" aria-label="候选字符组" style={{ gridTemplateColumns: `repeat(${candidateShape.cols + 1}, minmax(0, 1fr))` }}>
       <button className={`palette-btn${app.tokenPalette === "digits" ? " active" : ""}`} onClick={() => { app.setTokenPalette("digits"); sync(); }}>123</button>
@@ -108,7 +109,7 @@ export function ToolContext({ app, sync }: Props) {
   const t = app.tool;
   const standardSumMax = maximumStandardSum(app.puzzle.grid);
   const maximumSide = Math.max(app.puzzle.grid.rows, app.puzzle.grid.cols);
-  const updateText = (key: "edgeText" | "cornerText" | "cageSum") =>
+  const updateText = (key: "edgeText" | "cornerText" | "cageSum" | "cageText") =>
     (event: ChangeEvent<HTMLInputElement>) => {
       app[key] = event.target.value;
       sync();
@@ -125,12 +126,12 @@ export function ToolContext({ app, sync }: Props) {
         ? "选择格子后，通过小键盘切换中标（居中候选数）。"
         : "选择格子后，通过小键盘切换角标（按数字位置排列）。";
     content = <>
-      <Hint>{hint} 普通单击重新选择、再点同一格可取消选中；按住拖动可沿正交相邻格扩展，按住 Shift 点击或拖动可追加离散区域。字符会一次作用于全部选中格；若全部已有该字符，再点一次即可全部移除。</Hint>
+      <Hint>{hint} 普通单击总是重新选择；按住拖动可沿正交相邻格扩展，按住 Shift 点击或拖动可追加离散区域。字符会一次作用于全部选中格；若全部已有该字符，再点一次即可全部移除。</Hint>
       <CharacterDial app={app} sync={sync} />
     </>;
   } else if (t === "color") {
     content = <>
-      <Hint>普通单击重新选择、再点同一格可取消选中；按住拖动可沿正交相邻格扩展，按住 Shift 点击或拖动可追加离散区域。颜色会一次作用于全部选中格；若全部已有该颜色，再点一次即可全部移除。</Hint>
+      <Hint>普通单击总是重新选择；按住拖动可沿正交相邻格扩展，按住 Shift 点击或拖动可追加离散区域。颜色会一次作用于全部选中格；若全部已有该颜色，再点一次即可全部移除。</Hint>
       <div className="selection-summary color-selection-summary">
         {app.selection ? `已选择 ${Math.max(1, app.selectedCells.length)} 格` : "请先选择格子"}
         <span>同一格的多种颜色仍会等分显示</span>
@@ -252,17 +253,33 @@ export function ToolContext({ app, sync }: Props) {
       ["equal", "和值 ="],
       ["at-least", "和值 ≥"],
       ["at-most", "和值 ≤"],
+      ["custom", "自定义"],
       ["none", "空框"],
     ] as const;
     content = <>
       <Hint><strong>杀手框：</strong>默认显示笼内数字和值，也可表示和值下限、上限，或只绘制纯虚线区域。按住滑动可连续加入或移出格子。</Hint>
       {app.cageError && <div className="err">{app.cageError}</div>}
-      <div className="row shape-options">
-        {cageRelations.map(([relation, label]) => (
-          <button key={relation} className={`opt-btn${app.cageRelation === relation ? " active" : ""}`} onClick={() => { app.cageRelation = relation; app.cageError = ""; sync(); }}>{label}</button>
-        ))}
+      <div className="row cage-config-row">
+        <select
+          data-input="cageRelation"
+          value={app.cageRelation}
+          onChange={(event) => { app.cageRelation = event.target.value as CageRelation; app.cageError = ""; sync(); }}
+        >
+          {cageRelations.map(([relation, label]) => (
+            <option key={relation} value={relation}>{label}</option>
+          ))}
+        </select>
+        {app.cageRelation === "custom"
+          ? <input type="text" data-input="cageText" value={app.cageText} onChange={updateText("cageText")} placeholder="左上角文字" />
+          : <input type="number" data-input="cageSum" value={app.cageSum} onChange={updateText("cageSum")} min={1} max={standardSumMax * Math.max(app.puzzle.grid.rows, app.puzzle.grid.cols)} disabled={app.cageRelation === "none"} placeholder={app.cageRelation === "none" ? "空框不显示数字" : "提示数字"} />}
       </div>
-      <div className="row"><input type="number" data-input="cageSum" value={app.cageSum} onChange={updateText("cageSum")} min={1} max={standardSumMax * Math.max(app.puzzle.grid.rows, app.puzzle.grid.cols)} disabled={app.cageRelation === "none"} placeholder={app.cageRelation === "none" ? "空框不显示数字" : "提示数字"} /></div>
+      <div className="row line-style-row">
+        <label>颜色 <input type="color" value={app.cageColor} onChange={(event) => { app.cageColor = event.target.value; sync(); }} /></label>
+        <label className="line-width-control">字号
+          <input type="range" min={10} max={50} step={5} value={app.cageFontSize} onChange={(event) => { app.cageFontSize = Number(event.target.value); sync(); }} />
+          <output>{app.cageFontSize}%</output>
+        </label>
+      </div>
       <div className="row">
         <button className="primary" onClick={() => { app.commitCage(); sync(); }}>✓ 完成</button>
         <button className="danger" onClick={() => { app.deleteCage(); sync(); }}>删除笼</button>

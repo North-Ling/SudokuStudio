@@ -739,6 +739,35 @@ body {
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
+.context select {
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+  color: var(--ink);
+}
+
+.context select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.cage-config-row {
+  flex-wrap: nowrap;
+}
+
+.cage-config-row select,
+.cage-config-row input[type="number"] {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.line-style-row {
+  flex-wrap: nowrap;
+}
+
 .line-style-row label {
   display: inline-flex;
   align-items: center;
@@ -758,11 +787,12 @@ body {
 
 .line-style-row .line-width-control {
   flex: 1;
+  min-width: 0;
 }
 
 .line-style-row input[type="range"] {
   flex: 1;
-  min-width: 80px;
+  min-width: 60px;
 }
 
 .line-style-row output {

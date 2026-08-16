@@ -17,10 +17,10 @@ export function ToolPanel({ app, sync }: Props) {
   }, [app.mode, app.tool]);
 
   return <aside className="panel">
-    <div className="panel-heading">
+    {/* <div className="panel-heading">
       <strong>{app.mode === "solve" ? "作答工具" : "题面与约束"}</strong>
       <span>{app.mode === "solve" ? "题目约束已锁定" : "完整出题工具"}</span>
-    </div>
+    </div> */}
     {app.mode === "edit" && <div className="global-constraints">
       <div className="group-label">全局额外限制</div>
       <label title="两条主对角线上的数字分别不能重复；自动显示两条主对角线">

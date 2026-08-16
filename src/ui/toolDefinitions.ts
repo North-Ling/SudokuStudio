@@ -43,7 +43,7 @@ export const AUTHOR_TOOL_GROUPS: ToolGroupDef[] = [
   {
     label: "格内区域约束",
     tools: [
-      { tool: "cage", label: "Killer 杀手笼", hint: "滑过格子连续添加或移出杀手笼" },
+      { tool: "cage", label: "Killer", hint: "滑过格子连续添加或移出杀手笼" },
     ],
   },
   {

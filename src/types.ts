@@ -97,15 +97,21 @@ export interface CornerData {
 }
 
 // ---- 高层约束 ----
-export type CageRelation = "equal" | "at-least" | "at-most" | "none";
+export type CageRelation = "equal" | "at-least" | "at-most" | "none" | "custom";
 
 export interface KillerCage {
   id: number;
   cells: CellRef[];
-  /** equal=和值；at-least/at-most=和值上下界；none=纯虚线区域 */
+  /** equal=和值；at-least/at-most=和值上下界；none=纯虚线区域；custom=任意文字 */
   relation: CageRelation;
-  /** none 时为 null，其余模式为提示数字 */
+  /** none / custom 时为 null，其余模式为提示数字 */
   sum: number | null;
+  /** custom 模式下左上角显示的任意文字 */
+  text?: string;
+  /** 提示文字颜色（CSS 颜色） */
+  color?: string;
+  /** 提示文字大小（相对单元格边长的百分比，默认 22） */
+  fontSize?: number;
 }
 
 export interface LineStyle {
