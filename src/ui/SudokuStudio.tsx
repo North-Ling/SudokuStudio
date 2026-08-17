@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { App, type AppMode } from "../app";
 import { savePuzzleToLibrary, type PuzzleLibraryEntry } from "../library";
 import type { Puzzle } from "../types";
-import { validationDescription } from "../grid";
+// import { validationDescription } from "../grid";
 import { deriveAutomaticRuleDescriptions } from "../constraintRules";
 import { validatableRuleKeys } from "../constraintValidation";
 import { BoardCanvas } from "./BoardCanvas";
@@ -248,15 +248,15 @@ function AutomaticRules({ rules, editable = false, violatedKeys, app, sync }: {
   </div>;
 }
 
-function HelpBar({ app }: { app: App }) {
-  const validation = validationDescription(app.puzzle.grid);
-  return <div className="helpbar">
-    {app.mode === "solve" ? <>
-      <span className="mode-note">解题模式</span>
-      &nbsp;·&nbsp; 字符键填入/标记 &nbsp;·&nbsp; <kbd>Shift</kbd>+字符 中标 &nbsp;·&nbsp; <kbd>Ctrl/Cmd</kbd>+字符 角标 &nbsp;·&nbsp; <kbd>Del</kbd> 清除 &nbsp;·&nbsp; {validation}
-    </> : <>
-      <span className="mode-note">出题模式</span>
-      &nbsp;·&nbsp; 箭头与温度计支持斜向连接 &nbsp;·&nbsp; {validation} &nbsp;·&nbsp; <kbd>Esc</kbd> 取消绘制
-    </>}
-  </div>;
-}
+// function HelpBar({ app }: { app: App }) {
+//   const validation = validationDescription(app.puzzle.grid);
+//   return <div className="helpbar">
+//     {app.mode === "solve" ? <>
+//       <span className="mode-note">解题模式</span>
+//       &nbsp;·&nbsp; 字符键填入/标记 &nbsp;·&nbsp; <kbd>Shift</kbd>+字符 中标 &nbsp;·&nbsp; <kbd>Ctrl/Cmd</kbd>+字符 角标 &nbsp;·&nbsp; <kbd>Del</kbd> 清除 &nbsp;·&nbsp; {validation}
+//     </> : <>
+//       <span className="mode-note">出题模式</span>
+//       &nbsp;·&nbsp; 箭头与温度计支持斜向连接 &nbsp;·&nbsp; {validation} &nbsp;·&nbsp; <kbd>Esc</kbd> 取消绘制
+//     </>}
+//   </div>;
+// }
