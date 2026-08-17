@@ -17,12 +17,12 @@ pnpm preview    # 预览生产构建
 
 ## 内置题目
 
-内置题目来自 `src/puzzles/*.json`，构建时由 `import.meta.glob` 自动扫描加载，**新增题目只需把 JSON 文件丢进该文件夹**：
+内置题目来自 `src/puzzles/*.json`，构建时由 `import.meta.glob` 自动扫描加载，**只要文件夹里有 JSON 文件就会解析并在题库展示**。添加题目有两种方式：
 
-1. 在浏览器里打开应用 → 出题工作台做好题目 → 导出 → 切到 **JSON** → 复制内容。
-2. 把内容保存为 `src/puzzles/你的题目.json`（文件名决定题库中的显示顺序）。
+- **开发模式自动写入**：`pnpm dev` 下，在出题工作台「保存到题库」时，题目 JSON 会自动写入 `src/puzzles/`（按钮会显示「已写入文件」）；生产构建没有 dev server，只能走 localStorage。
+- **手动拖入**：把导出的 JSON 文件直接放进 `src/puzzles/` 文件夹，重新构建即可（文件名决定题库中的显示顺序）。
 
-JSON 是完整谜题数据；`title`、`description`、`rules` 会显示在题库卡片，缺失字段由导入逻辑自动补全。内置题目在界面上只读，保存时会生成个人副本，不会覆盖源文件。`src/puzzles/example.json` 是一个最小示例。
+「导出 JSON」的内容与文件夹里存的内容完全一致，可视为一种快捷复制方式；「导入」也兼容网站内粘贴 JSON 或直接拖入文件。JSON 是完整谜题数据，`title`、`description`、`rules` 会显示在题库卡片，缺失字段由导入逻辑自动补全。内置题目在界面上只读，保存时会生成个人副本，不会覆盖源文件。`src/puzzles/example.json` 是一个最小示例。
 
 ## 功能
 

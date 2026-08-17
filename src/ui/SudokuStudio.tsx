@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { App, type AppMode } from "../app";
-import { savePuzzleToLibrary, type PuzzleLibraryEntry } from "../library";
+import { persistPuzzleToFolder, savePuzzleToLibrary, type PuzzleLibraryEntry } from "../library";
 import type { Puzzle } from "../types";
 // import { validationDescription } from "../grid";
 import { deriveAutomaticRuleDescriptions } from "../constraintRules";
@@ -74,6 +74,12 @@ export function SudokuStudio({ initialPuzzle }: Props) {
     setSaveLabel("已保存 ✓");
     if (saveTimer.current != null) window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => setSaveLabel("保存到题库"), 1200);
+    void persistPuzzleToFolder(app.puzzle).then((ok) => {
+      if (!ok) return;
+      setSaveLabel("已保存 ✓（已写入文件）");
+      if (saveTimer.current != null) window.clearTimeout(saveTimer.current);
+      saveTimer.current = window.setTimeout(() => setSaveLabel("保存到题库"), 1600);
+    });
     sync();
   };
 

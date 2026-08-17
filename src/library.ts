@@ -93,3 +93,24 @@ export function deleteLibraryEntry(id: string): boolean {
   writeStoredEntries(next);
   return true;
 }
+
+/**
+ * 开发模式下，把题目 JSON 写入 src/puzzles/ 文件夹（通过 dev server 中间件）。
+ * 生产环境或写入失败时静默返回 false，不影响 localStorage 保存。
+ */
+export async function persistPuzzleToFolder(puzzle: Puzzle): Promise<boolean> {
+  if (!import.meta.env.DEV) return false;
+  try {
+    const res = await fetch("/__sudoku/save-puzzle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename: puzzle.title,
+        json: JSON.stringify(puzzle, null, 2),
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
