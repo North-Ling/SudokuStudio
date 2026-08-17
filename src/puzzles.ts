@@ -3,6 +3,7 @@ import {
   arrowSymbol,
   cornerTextSymbol,
   createEmptyPuzzle,
+  deserializePuzzle,
   dotSymbol,
   inequalitySymbol,
   vxSymbol,
@@ -152,7 +153,34 @@ function showcasePuzzle(): Puzzle {
   return p;
 }
 
+// 从 src/puzzles/*.json 自动加载内置题目：新增题目只需把 JSON 文件放进该文件夹。
+interface JsonPuzzleFile {
+  title?: string;
+  description?: string;
+  rules?: string;
+  [key: string]: unknown;
+}
+
+function loadJsonPuzzles(): PuzzleDef[] {
+  const modules = import.meta.glob("./puzzles/*.json", { eager: true }) as Record<
+    string,
+    { default: JsonPuzzleFile }
+  >;
+  return Object.keys(modules)
+    .sort()
+    .map((path) => {
+      const data = modules[path].default;
+      const json = JSON.stringify(data);
+      return {
+        name: data.title?.trim() || "未命名题目",
+        description: data.description?.trim() || data.rules?.trim() || "",
+        build: () => deserializePuzzle(json),
+      };
+    });
+}
+
 export const PUZZLES: PuzzleDef[] = [
+  ...loadJsonPuzzles(),
   { name: "经典数独", description: "标准 9×9 数独", build: classicPuzzle },
   {
     name: "约束展示",

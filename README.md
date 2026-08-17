@@ -15,6 +15,15 @@ pnpm build      # 类型检查 + 生产构建
 pnpm preview    # 预览生产构建
 ```
 
+## 内置题目
+
+内置题目来自 `src/puzzles/*.json`，构建时由 `import.meta.glob` 自动扫描加载，**新增题目只需把 JSON 文件丢进该文件夹**：
+
+1. 在浏览器里打开应用 → 出题工作台做好题目 → 导出 → 切到 **JSON** → 复制内容。
+2. 把内容保存为 `src/puzzles/你的题目.json`（文件名决定题库中的显示顺序）。
+
+JSON 是完整谜题数据；`title`、`description`、`rules` 会显示在题库卡片，缺失字段由导入逻辑自动补全。内置题目在界面上只读，保存时会生成个人副本，不会覆盖源文件。`src/puzzles/example.json` 是一个最小示例。
+
 ## 功能
 
 ### 独立的出题窗口与解题窗口
