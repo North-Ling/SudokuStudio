@@ -234,7 +234,7 @@ export async function createPuzzleCardBlob(puzzle: Puzzle): Promise<Blob> {
     rulesY += 34;
     ctx.font = `700 24px ${FONT}`;
     ctx.fillStyle = "#0f766e";
-    ctx.fillText("题面约束", CARD_PADDING, rulesY);
+    ctx.fillText("相关约束", CARD_PADDING, rulesY);
     rulesY += 46;
     automaticBlocks.forEach((block) => {
       ctx.fillStyle = "#14b8a6";

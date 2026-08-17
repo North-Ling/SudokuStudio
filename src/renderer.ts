@@ -631,7 +631,7 @@ function drawArrowConstraint(
   ctx.strokeStyle = color;
   ctx.lineWidth = strokeWidth;
   ctx.beginPath();
-  ctx.arc(first.x, first.y, cell * 0.3, 0, Math.PI * 2);
+  ctx.arc(first.x, first.y, cell * 0.4, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 

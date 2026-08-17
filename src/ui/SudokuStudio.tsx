@@ -90,7 +90,7 @@ export function SudokuStudio({ initialPuzzle }: Props) {
     <header className="topbar">
       <div className="brand">Sudoku<span>Studio</span></div>
       <button id="btn-library" className={`library-button${page === "library" ? " active" : ""}`} title="打开题库页面" onClick={() => { setModal(null); setPage("library"); }}>▦ 题库</button>
-      <div className="topbar-title">{page === "library" ? "数独题库" : app.puzzle.title || "未命名题目"}</div>
+      {/* <div className="topbar-title">{page === "library" ? "数独题库" : app.puzzle.title || "未命名题目"}</div> */}
       {page === "studio" ? <>
         <div className="mode-switch" role="group" aria-label="工作模式">
         <button data-mode="solve" className={app.mode === "solve" ? "active" : ""} onClick={() => setMode("solve")} title="进入独立的解题窗口">
@@ -123,6 +123,7 @@ export function SudokuStudio({ initialPuzzle }: Props) {
       <div className="board-wrap" id="board-wrap">
         <PuzzleInfo app={app} sync={sync} focusTitleToken={focusTitleToken} />
         <BoardCanvas app={app} sync={sync} />
+        <div className="made-by">Made by NorthLing</div>
       </div>
       <ToolPanel app={app} sync={sync} />
     </main> : <LibraryPage
@@ -131,9 +132,9 @@ export function SudokuStudio({ initialPuzzle }: Props) {
       onDelete={(id) => { if (currentEntryId === id) setCurrentEntryId(null); }}
     />}
 
-    {page === "studio"
+    {/* {page === "studio"
       ? <HelpBar app={app} />
-      : <div className="helpbar"><span className="mode-note">独立题库页面</span>&nbsp;·&nbsp; 我的题目保存在当前浏览器本地</div>}
+      : <div className="helpbar"><span className="mode-note">独立题库页面</span>&nbsp;·&nbsp; 我的题目保存在当前浏览器本地</div>} */}
 
     {modal === "new" && <NewPuzzleModal close={() => setModal(null)} create={(grid) => {
       app.newEmptyPuzzle(grid);
@@ -251,10 +252,10 @@ function HelpBar({ app }: { app: App }) {
   const validation = validationDescription(app.puzzle.grid);
   return <div className="helpbar">
     {app.mode === "solve" ? <>
-      <span className="mode-note">解题窗口：仅保留作答标记，题面约束不会出现在工具栏</span>
+      <span className="mode-note">解题模式</span>
       &nbsp;·&nbsp; 字符键填入/标记 &nbsp;·&nbsp; <kbd>Shift</kbd>+字符 中标 &nbsp;·&nbsp; <kbd>Ctrl/Cmd</kbd>+字符 角标 &nbsp;·&nbsp; <kbd>Del</kbd> 清除 &nbsp;·&nbsp; {validation}
     </> : <>
-      <span className="mode-note">出题工作台：数字将作为已知数，可编辑完整题面约束</span>
+      <span className="mode-note">出题模式</span>
       &nbsp;·&nbsp; 箭头与温度计支持斜向连接 &nbsp;·&nbsp; {validation} &nbsp;·&nbsp; <kbd>Esc</kbd> 取消绘制
     </>}
   </div>;

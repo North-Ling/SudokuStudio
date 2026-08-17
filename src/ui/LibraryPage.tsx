@@ -79,7 +79,7 @@ export function LibraryPage({ currentEntryId, openEntry, onDelete }: LibraryPage
                 : "无标准宫"}</span>
             </div> */}
             <DifficultyStars value={entry.puzzle.difficulty} compact />
-            <div><p>{entry.puzzle.rules?.trim() || "标准数独规则适用"}</p></div>
+            <div className="library-card-rules"><p>{entry.puzzle.rules?.trim() || "标准数独规则适用"}</p></div>
             {automaticRules.length > 0 && <div className="library-rule-tags">
               {automaticRules.slice(0, 4).map((rule) => <span key={rule.key}>{rule.label}</span>)}
               {automaticRules.length > 4 && <span>+{automaticRules.length - 4}</span>}
