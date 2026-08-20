@@ -1,6 +1,6 @@
 import { isPathTool, type App } from "./app";
 import type { CellRef } from "./types";
-import { hitCell } from "./geometry";
+import { hitCell, hitPathCell } from "./geometry";
 import { gridTokens, letterGridTokens, symbolGridTokens } from "./grid";
 
 const L = (app: App) => app.getLayout();
@@ -72,10 +72,10 @@ export function attachInput(
         lastCell = [cell.r, cell.c];
       }
     } else if (isPathTool(tool)) {
-      const cell = hitCell(L(app), x, y);
-      if (cell) {
-        app.pathCellClick(cell.r, cell.c);
-        lastCell = [cell.r, cell.c];
+      const node = hitPathCell(L(app), x, y);
+      if (node) {
+        app.pathCellClick(node[0], node[1]);
+        lastCell = node;
       }
     } else if (tool === "skyscraper" || tool === "x-sum") {
       const target = app.hitTest(x, y);
@@ -84,7 +84,7 @@ export function attachInput(
       app.eraseAt(x, y);
     } else if (tool.startsWith("edge")) {
       const target = app.hitTest(x, y);
-      if (target && (target.kind === "edgeH" || target.kind === "edgeV")) {
+      if (target && (target.kind === "edgeH" || target.kind === "edgeV" || target.kind === "borderEdge")) {
         app.beginEdgeStroke(target);
         lastTargetKey = `${target.kind}:${target.r},${target.c}`;
       }
@@ -92,7 +92,7 @@ export function attachInput(
       // 边 / 角工具：直接命中检测
       const target = app.hitTest(x, y);
       if (target) {
-        if (target.kind === "edgeH" || target.kind === "edgeV") {
+        if (target.kind === "edgeH" || target.kind === "edgeV" || target.kind === "borderEdge") {
           if (tool === "lookout") app.handleEdgeClick(target);
           else app.beginEdgeStroke(target);
         } else if (target.kind === "corner") {
@@ -122,26 +122,32 @@ export function attachInput(
             onStateChange();
           }
         }
-      } else if (
-        tool === "cell-shape" ||
-        tool === "cage" ||
-        isPathTool(tool)
-      ) {
+      } else if (tool === "cell-shape" || tool === "cage") {
         const cell = hitCell(L(app), x, y);
         if (cell) {
           const key = `${cell.r},${cell.c}`;
           const lastKey = lastCell ? `${lastCell[0]},${lastCell[1]}` : null;
           if (key !== lastKey) {
             if (tool === "cell-shape") app.continueCellDecorationStroke(cell.r, cell.c);
-            else if (tool === "cage") app.cageCellPaint(cell.r, cell.c);
-            else app.pathCellPaint(cell.r, cell.c);
+            else app.cageCellPaint(cell.r, cell.c);
             lastCell = [cell.r, cell.c];
+            onStateChange();
+          }
+        }
+      } else if (isPathTool(tool)) {
+        const node = hitPathCell(L(app), x, y);
+        if (node) {
+          const key = `${node[0]},${node[1]}`;
+          const lastKey = lastCell ? `${lastCell[0]},${lastCell[1]}` : null;
+          if (key !== lastKey) {
+            app.pathCellPaint(node[0], node[1]);
+            lastCell = node;
             onStateChange();
           }
         }
       } else if (tool.startsWith("edge")) {
         const target = app.hitTest(x, y);
-        if (target && (target.kind === "edgeH" || target.kind === "edgeV")) {
+        if (target && (target.kind === "edgeH" || target.kind === "edgeV" || target.kind === "borderEdge")) {
           const key = `${target.kind}:${target.r},${target.c}`;
           if (key !== lastTargetKey) {
             app.continueEdgeStroke(target);

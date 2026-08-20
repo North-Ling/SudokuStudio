@@ -15,6 +15,7 @@ import type {
   LineConstraint,
   LineConstraintKind,
   LookoutAnchor,
+  PathNodeRef,
   Puzzle,
 } from "./types";
 import {
@@ -36,7 +37,8 @@ import {
   segmentDistance,
   vertexPoint,
 } from "./geometry";
-import { gridTokens, maximumStandardSum } from "./grid";
+import { gridTokens } from "./grid";
+import { normalizeCellToken, parseGridTokenList } from "./tokens";
 import {
   arrowSymbol,
   clonePuzzle,
@@ -129,7 +131,7 @@ const EDIT_ONLY_TOOLS = new Set<ToolMode>([
 
 export type PathType = "thermo" | "arrow" | LineConstraintKind;
 export type PendingPath = {
-  cells: CellRef[];
+  cells: PathNodeRef[];
   type: PathType;
   color?: string;
   thickness?: number;
@@ -170,6 +172,15 @@ type CellDecorationStroke = {
   decorations: CellDecoration[];
   remove: boolean;
 };
+
+function sameLookoutAnchor(a: LookoutAnchor, b: LookoutAnchor): boolean {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "borderEdge" && b.kind === "borderEdge") {
+    return a.side === b.side && a.index === b.index;
+  }
+  if (a.kind === "borderEdge" || b.kind === "borderEdge") return false;
+  return a.r === b.r && a.c === b.c;
+}
 
 function toggleInList(list: CellToken[], token: CellToken): CellToken[] {
   const i = list.indexOf(token);
@@ -225,7 +236,7 @@ export class App {
   pendingCage: CellRef[] | null = null;
   pendingCageId: number | null = null;
   pendingPath: PendingPath | null = null;
-  pendingCustomEdges: Array<[CellRef, CellRef]> | null = null;
+  pendingCustomEdges: Array<[PathNodeRef, PathNodeRef]> | null = null;
 
   private base: Puzzle;
   private solveDraft: Puzzle;
@@ -235,7 +246,7 @@ export class App {
   private cellDecorationStroke: CellDecorationStroke | null = null;
   private edgeStroke: EdgeStroke | null = null;
   private cageStrokeAction: "add" | "remove" | null = null;
-  private lastCustomCell: CellRef | null = null;
+  private lastCustomCell: PathNodeRef | null = null;
   private lastFilledCells: CellRef[] = [];
   private constraintConflicts: CellRef[] = [];
   private violatedRuleKeys: string[] = [];
@@ -978,12 +989,14 @@ export class App {
   // ==========================================================================
 
   handleEdgeClick(hit: EdgeHit): void {
-    const edge = this.getEdge(hit.kind, hit.r, hit.c);
+    const edge = this.getEdge(hit);
     if (!edge) return;
     if (!this.canUseTool(this.tool)) return;
 
     if (this.tool === "lookout") {
-      this.toggleLookout({ kind: hit.kind, r: hit.r, c: hit.c });
+      this.toggleLookout(hit.kind === "borderEdge"
+        ? { kind: "borderEdge", side: hit.side, index: hit.index }
+        : { kind: hit.kind, r: hit.r, c: hit.c });
       return;
     }
 
@@ -1022,7 +1035,12 @@ export class App {
     }
     if (this.tool === "erase") {
       const lookoutIndex = this.puzzle.lookouts.findIndex((clue) =>
-        clue.anchor.kind === hit.kind && clue.anchor.r === hit.r && clue.anchor.c === hit.c
+        sameLookoutAnchor(
+          clue.anchor,
+          hit.kind === "borderEdge"
+            ? { kind: "borderEdge", side: hit.side, index: hit.index }
+            : { kind: hit.kind, r: hit.r, c: hit.c },
+        )
       );
       if (lookoutIndex >= 0) {
         this.snapshotForChange();
@@ -1049,7 +1067,7 @@ export class App {
   }
 
   beginEdgeStroke(hit: EdgeHit): void {
-    const edge = this.getEdge(hit.kind, hit.r, hit.c);
+    const edge = this.getEdge(hit);
     if (!edge || !this.canUseTool(this.tool)) return;
     if (this.tool === "edge-bold") {
       if (this.edgeDrawKind === "bold") {
@@ -1106,7 +1124,7 @@ export class App {
   }
 
   private paintEdgeStroke(hit: EdgeHit): void {
-    const edge = this.getEdge(hit.kind, hit.r, hit.c);
+    const edge = this.getEdge(hit);
     const stroke = this.edgeStroke;
     if (!edge || !stroke) return;
     if (stroke.kind === "bold") {
@@ -1146,14 +1164,18 @@ export class App {
     this.render();
   }
 
-  private getEdge(kind: "edgeH" | "edgeV", r: number, c: number): EdgeData | null {
+  private getEdge(hit: EdgeHit): EdgeData | null {
     const { rows, cols } = this.puzzle.grid;
-    if (kind === "edgeH") {
-      if (r < 0 || r >= rows || c < 0 || c >= cols - 1) return null;
-      return this.puzzle.edgeH[r][c];
+    if (hit.kind === "borderEdge") {
+      const side = this.puzzle.borderEdges[hit.side];
+      return hit.index >= 0 && hit.index < side.length ? side[hit.index] : null;
     }
-    if (r < 0 || r >= rows - 1 || c < 0 || c >= cols) return null;
-    return this.puzzle.edgeV[r][c];
+    if (hit.kind === "edgeH") {
+      if (hit.r < 0 || hit.r >= rows || hit.c < 0 || hit.c >= cols - 1) return null;
+      return this.puzzle.edgeH[hit.r][hit.c];
+    }
+    if (hit.r < 0 || hit.r >= rows - 1 || hit.c < 0 || hit.c >= cols) return null;
+    return this.puzzle.edgeV[hit.r][hit.c];
   }
 
   private setEdgeSymbol(edge: EdgeData, sym: EdgeSymbol): void {
@@ -1234,11 +1256,11 @@ export class App {
     if (this.mode !== "edit") return;
     const palette = gridTokens(this.puzzle.grid);
     const digits = Array.from(new Set(
-      Array.from(this.lookoutDigits.toUpperCase()).filter((token) => palette.includes(token)),
+      parseGridTokenList(this.lookoutDigits, palette),
     )).sort((a, b) => palette.indexOf(a) - palette.indexOf(b));
     if (digits.length === 0) return;
     const index = this.puzzle.lookouts.findIndex((clue) =>
-      clue.anchor.kind === anchor.kind && clue.anchor.r === anchor.r && clue.anchor.c === anchor.c
+      sameLookoutAnchor(clue.anchor, anchor)
     );
     this.snapshotForChange();
     if (index >= 0 && JSON.stringify(this.puzzle.lookouts[index].digits) === JSON.stringify(digits)) {
@@ -1270,10 +1292,7 @@ export class App {
       return;
     }
 
-    const value = Math.max(
-      1,
-      Math.min(maximumStandardSum(this.puzzle.grid), Math.round(this.littleKillerValue)),
-    );
+    const value = Math.round(this.littleKillerValue);
     const index = this.puzzle.littleKillers.findIndex((clue) =>
       clue.anchor.r === r && clue.anchor.c === c
     );
@@ -1411,9 +1430,9 @@ export class App {
     if (
       this.cageRelation !== "none" &&
       this.cageRelation !== "custom" &&
-      (sum == null || !Number.isFinite(sum) || sum <= 0)
+      (sum == null || !Number.isFinite(sum))
     ) {
-      this.cageError = "请输入有效的正数提示，或选择“空框”。";
+      this.cageError = "请输入有效的整数提示，或选择“空框”。";
       this.render();
       return;
     }
@@ -1523,7 +1542,7 @@ export class App {
   // 路径（温度计 / 箭头）构建
   // ==========================================================================
 
-  private makePendingPath(cells: CellRef[], type: PathType): PendingPath {
+  private makePendingPath(cells: PathNodeRef[], type: PathType): PendingPath {
     return {
       cells,
       type,
@@ -1594,7 +1613,7 @@ export class App {
     this.lastCustomCell = [r, c];
   }
 
-  private toggleCustomEdge(a: CellRef, b: CellRef): void {
+  private toggleCustomEdge(a: PathNodeRef, b: PathNodeRef): void {
     const edges = this.pendingCustomEdges;
     if (!edges) return;
     const index = edges.findIndex(([p, q]) =>
@@ -1605,8 +1624,8 @@ export class App {
     else edges.push([a, b]);
   }
 
-  private edgesToCells(edges: Array<[CellRef, CellRef]>): CellRef[] {
-    const cells: CellRef[] = [];
+  private edgesToCells(edges: Array<[PathNodeRef, PathNodeRef]>): PathNodeRef[] {
+    const cells: PathNodeRef[] = [];
     const seen = new Set<string>();
     for (const [a, b] of edges) {
       for (const p of [a, b]) {
@@ -1628,7 +1647,7 @@ export class App {
       id: nextId(this.puzzle),
       kind: "custom",
       cells: this.edgesToCells(edges),
-      edges: edges.map(([a, b]) => [[a[0], a[1]], [b[0], b[1]]] as [CellRef, CellRef]),
+      edges: edges.map(([a, b]) => [[a[0], a[1]], [b[0], b[1]]] as [PathNodeRef, PathNodeRef]),
       color: this.lineColor,
       thickness: this.lineThickness,
       description: this.tool === "line-custom"
@@ -1725,14 +1744,14 @@ export class App {
     if (path.type === "thermo") {
       this.puzzle.thermos.push({
         id: nextId(this.puzzle),
-        cells: path.cells.map(([r, c]) => [r, c] as CellRef),
+        cells: path.cells.map(([r, c]) => [r, c] as PathNodeRef),
         color: path.color,
         thickness: path.thickness,
       });
     } else if (path.type === "arrow") {
       this.puzzle.arrows.push({
         id: nextId(this.puzzle),
-        cells: path.cells.map(([r, c]) => [r, c] as CellRef),
+        cells: path.cells.map(([r, c]) => [r, c] as PathNodeRef),
         color: path.color,
         thickness: path.thickness,
       });
@@ -1740,7 +1759,7 @@ export class App {
       this.puzzle.lines.push({
         id: nextId(this.puzzle),
         kind: path.type,
-        cells: path.cells.map(([r, c]) => [r, c] as CellRef),
+        cells: path.cells.map(([r, c]) => [r, c] as PathNodeRef),
         color: path.color,
         thickness: path.thickness,
         description: path.type === "custom" ? path.description : undefined,
@@ -1764,10 +1783,7 @@ export class App {
   handleOutsideClick(hit: OutsideHit): void {
     if (this.mode !== "edit") return;
     if (this.tool === "x-sum") {
-      const value = Math.max(
-        1,
-        Math.min(maximumStandardSum(this.puzzle.grid), Math.round(this.xSumValue)),
-      );
+      const value = Math.round(this.xSumValue);
       const existingIndex = this.puzzle.xSums.findIndex(
         (clue) => clue.side === hit.side && clue.index === hit.index,
       );
@@ -1786,10 +1802,7 @@ export class App {
       return;
     }
     if (this.tool !== "skyscraper") return;
-    const lineLength = hit.side === "top" || hit.side === "bottom"
-      ? this.puzzle.grid.rows
-      : this.puzzle.grid.cols;
-    const value = Math.max(1, Math.min(lineLength, Math.round(this.skyscraperValue)));
+    const value = Math.round(this.skyscraperValue);
     const existingIndex = this.puzzle.skyscrapers.findIndex(
       (clue) => clue.side === hit.side && clue.index === hit.index,
     );
@@ -1865,7 +1878,7 @@ export class App {
       }
     }
     const edge = hitEdge(this.layout, x, y, edgeTol);
-    const edgeData = edge ? this.getEdge(edge.kind, edge.r, edge.c) : null;
+    const edgeData = edge ? this.getEdge(edge) : null;
     if (
       edge && edgeData &&
       (this.mode === "edit" || edgeData.bold || edgeData.decorations.length > 0)
@@ -2028,7 +2041,7 @@ export class App {
   }
 
   applyPaletteToken(rawToken: string): void {
-    const token = Array.from(rawToken)[0] ?? "";
+    const token = normalizeCellToken(rawToken);
     if (!token) return;
     if (this.inputSelections().length === 0) return;
     if (this.tool === "digit") this.applyValueToSelections(token, true);
@@ -2043,7 +2056,7 @@ export class App {
   }
 
   setCustomCellToken(rawToken: string): void {
-    this.customCellToken = Array.from(rawToken)[0] ?? "";
+    this.customCellToken = normalizeCellToken(rawToken);
   }
 
   markCornerOnSelection(token: CellToken): void {
@@ -2145,7 +2158,7 @@ export class App {
     if (this.tool === "erase") {
       if (this.mode === "solve") {
         const edge = hitEdge(this.layout, x, y, this.layout.cell * 0.22);
-        const edgeData = edge ? this.getEdge(edge.kind, edge.r, edge.c) : null;
+        const edgeData = edge ? this.getEdge(edge) : null;
         this.hover = edge && edgeData && (edgeData.bold || edgeData.decorations.length > 0)
           ? edge
           : null;

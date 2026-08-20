@@ -1,5 +1,6 @@
 import type {
   Arrow,
+  BorderEdges,
   CellData,
   CellRef,
   ColorName,
@@ -22,18 +23,14 @@ import {
   littleKillerTargetVertex,
   sortCells,
 } from "./geometry";
-import { createGridSpec, maximumStandardSum, normalizeGridSpec } from "./grid";
+import { createGridSpec, normalizeGridSpec } from "./grid";
+import { normalizeCellToken } from "./tokens";
 
 // ----------------------------------------------------------------------------
 // 谜题文档的创建 / 克隆 / 序列化
 // ----------------------------------------------------------------------------
 
 export const DEFAULT_RULES = "标准数独规则适用";
-
-function normalizeCellToken(value: unknown): string {
-  if (value === 0 || value == null) return "";
-  return Array.from(String(value))[0] ?? "";
-}
 
 type SerializedLittleKiller = Partial<LittleKillerClue> & {
   r?: number;
@@ -66,7 +63,7 @@ function normalizeLittleKiller(
   return {
     anchor: { r: anchor.r, c: anchor.c },
     direction,
-    value: Math.max(1, Math.min(maximumStandardSum(grid), Math.round(value))),
+    value: Math.round(value),
   };
 }
 
@@ -80,6 +77,15 @@ function emptyEdge(): EdgeData {
 
 function emptyCorner(): CornerData {
   return { symbols: [] };
+}
+
+function createBorderEdges(grid: GridSpec): BorderEdges {
+  return {
+    top: Array.from({ length: grid.cols }, emptyEdge),
+    right: Array.from({ length: grid.rows }, emptyEdge),
+    bottom: Array.from({ length: grid.cols }, emptyEdge),
+    left: Array.from({ length: grid.rows }, emptyEdge),
+  };
 }
 
 export function createEmptyPuzzle(
@@ -118,6 +124,7 @@ export function createEmptyPuzzle(
     cells,
     edgeH,
     edgeV,
+    borderEdges: createBorderEdges(grid),
     corners,
     cages: [],
     thermos: [],
@@ -191,6 +198,17 @@ export function deserializePuzzle(json: string): Puzzle {
       data.corners?.[r]?.[c] ?? base.corners[r][c]
     )
   );
+  const normalizeBorderSide = (side: keyof BorderEdges, length: number): EdgeData[] =>
+    Array.from({ length }, (_, index) => {
+      const edge = data.borderEdges?.[side]?.[index] ?? base.borderEdges[side][index];
+      return { ...edge, decorations: edge.decorations ?? [] };
+    });
+  const borderEdges: BorderEdges = {
+    top: normalizeBorderSide("top", grid.cols),
+    right: normalizeBorderSide("right", grid.rows),
+    bottom: normalizeBorderSide("bottom", grid.cols),
+    left: normalizeBorderSide("left", grid.rows),
+  };
   const merged = {
     ...base,
     ...data,
@@ -203,6 +221,7 @@ export function deserializePuzzle(json: string): Puzzle {
     cells,
     edgeH,
     edgeV,
+    borderEdges,
     corners,
     cages: (data.cages ?? []).map((cage) => ({
       ...cage,

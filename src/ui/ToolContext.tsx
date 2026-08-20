@@ -1,7 +1,8 @@
 import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { isPathTool, pathTypeForTool, type App } from "../app";
 import { COLOR_PALETTE, LINE_RULE_DESCRIPTIONS } from "../model";
-import { candidateGridShape, gridTokens, letterGridTokens, maximumStandardSum, symbolGridTokens } from "../grid";
+import { candidateGridShape, gridTokens, letterGridTokens, symbolGridTokens } from "../grid";
+import { MAX_CELL_TOKEN_LENGTH, normalizeCellToken } from "../tokens";
 import type {
   CageRelation,
   CellDecoration,
@@ -40,13 +41,13 @@ function CharacterDial({ app, sync }: Props) {
       ? letterGridTokens(app.puzzle.grid)
       : symbolGridTokens(app.puzzle.grid);
   const candidateShape = candidateGridShape(app.puzzle.grid);
-  // 自定义字符输入用本地草稿显示：中文等输入法在组合拼音期间原样展示，
-  // 待选字完成后再截断为单字符，避免受控输入在 IME 组合中被截断成单个字母。
+  // 自定义 token 输入用本地草稿显示：中文等输入法在组合拼音期间原样展示，
+  // 待选字完成后再截断，避免受控输入在 IME 组合中被提前截断。
   const [customDraft, setCustomDraft] = useState(app.customCellToken);
   const composingRef = useRef(false);
 
   const commitCustomToken = (raw: string) => {
-    const token = Array.from(raw)[0] ?? "";
+    const token = normalizeCellToken(raw);
     app.setCustomCellToken(token);
     setCustomDraft(token);
   };
@@ -84,7 +85,7 @@ function CharacterDial({ app, sync }: Props) {
           type="text"
           data-input="customCellToken"
           value={customDraft}
-          placeholder="自定义"
+          placeholder={`自定义（最多 ${MAX_CELL_TOKEN_LENGTH} 字符）`}
           onChange={(event) => {
             const value = event.target.value;
             const composing = composingRef.current || (event.nativeEvent as InputEvent).isComposing;
@@ -107,7 +108,6 @@ function CharacterDial({ app, sync }: Props) {
 
 export function ToolContext({ app, sync }: Props) {
   const t = app.tool;
-  const standardSumMax = maximumStandardSum(app.puzzle.grid);
   const maximumSide = Math.max(app.puzzle.grid.rows, app.puzzle.grid.cols);
   const updateText = (key: "edgeText" | "cornerText" | "cageSum" | "cageText") =>
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -271,7 +271,7 @@ export function ToolContext({ app, sync }: Props) {
         </select>
         {app.cageRelation === "custom"
           ? <input type="text" data-input="cageText" value={app.cageText} onChange={updateText("cageText")} placeholder="左上角文字" />
-          : <input type="number" data-input="cageSum" value={app.cageSum} onChange={updateText("cageSum")} min={1} max={standardSumMax * Math.max(app.puzzle.grid.rows, app.puzzle.grid.cols)} disabled={app.cageRelation === "none"} placeholder={app.cageRelation === "none" ? "空框不显示数字" : "提示数字"} />}
+          : <input type="number" step={1} data-input="cageSum" value={app.cageSum} onChange={updateText("cageSum")} disabled={app.cageRelation === "none"} placeholder={app.cageRelation === "none" ? "空框不显示数字" : "作者自定义整数提示"} />}
       </div>
       <div className="row line-style-row">
         <label>颜色 <input type="color" value={app.cageColor} onChange={(event) => { app.cageColor = event.target.value; sync(); }} /></label>
@@ -288,17 +288,16 @@ export function ToolContext({ app, sync }: Props) {
     </>;
   } else if (t === "skyscraper") {
     content = <>
-      <Hint><strong>摩天楼：</strong>选择 1-{maximumSide} 后点击盘面外侧。数字表示从该方向能看到的楼房数量，大数会挡住后面的小数。</Hint>
+      <Hint><strong>摩天楼：</strong>输入任意整数后点击盘面外侧。标准语义下表示可见楼房数量；超出常规范围时由作者规则解释，可关闭自动判错。</Hint>
       <div className="row">
         <input
           type="number"
           data-input="skyscraperValue"
           value={app.skyscraperValue}
-          min={1}
-          max={maximumSide}
+          step={1}
           onChange={(event) => {
             const value = Number(event.target.value);
-            if (Number.isFinite(value)) app.skyscraperValue = Math.max(1, Math.min(maximumSide, Math.round(value)));
+            if (Number.isFinite(value)) app.skyscraperValue = Math.round(value);
             sync();
           }}
         />
@@ -306,11 +305,11 @@ export function ToolContext({ app, sync }: Props) {
     </>;
   } else if (t === "x-sum") {
     content = <>
-      <Hint><strong>X 和：</strong>从该方向看，第一个格子的数字 X 决定要累加前几个格；盘外填写这 X 个数字的总和。</Hint>
+      <Hint><strong>X 和：</strong>输入任意整数提示。标准语义是由首格 X 决定前 X 格之和；作者也可在规则中赋予其他含义并关闭自动判错。</Hint>
       <div className="row">
-        <input type="number" data-input="xSumValue" value={app.xSumValue} min={1} max={standardSumMax} onChange={(event) => {
+        <input type="number" step={1} data-input="xSumValue" value={app.xSumValue} onChange={(event) => {
           const value = Number(event.target.value);
-          if (Number.isFinite(value)) app.xSumValue = Math.max(1, Math.min(standardSumMax, Math.round(value)));
+          if (Number.isFinite(value)) app.xSumValue = Math.round(value);
           sync();
         }} />
       </div>
@@ -324,9 +323,9 @@ export function ToolContext({ app, sync }: Props) {
       <Hint><strong>小杀手：</strong>选择和值和斜向箭头，再点击盘面虚拟外圈的单元格。数字留在外格内，箭头从外部指向对应的盘面边界交点。</Hint>
       {app.littleKillerError && <div className="err">{app.littleKillerError}</div>}
       <div className="row">
-        <input type="number" data-input="littleKillerValue" value={app.littleKillerValue} min={1} max={standardSumMax} onChange={(event) => {
+        <input type="number" step={1} data-input="littleKillerValue" value={app.littleKillerValue} onChange={(event) => {
           const value = Number(event.target.value);
-          if (Number.isFinite(value)) app.littleKillerValue = Math.max(1, Math.min(standardSumMax, Math.round(value)));
+          if (Number.isFinite(value)) app.littleKillerValue = Math.round(value);
           sync();
         }} />
         {directions.map(([direction, label]) => <button key={direction} className={`opt-btn direction-btn${app.littleKillerDirection === direction ? " active" : ""}`} onClick={() => { app.littleKillerDirection = direction; app.littleKillerError = ""; sync(); }}>{label}</button>)}
@@ -334,13 +333,12 @@ export function ToolContext({ app, sync }: Props) {
     </>;
   } else if (t === "lookout") {
     content = <>
-      <Hint><strong>瞭望塔：</strong>输入当前题目字符表中的互不相同字符，再点击网格交汇点或相邻格之间的边；相邻单元格中必须出现圈内全部字符。</Hint>
+      <Hint><strong>瞭望塔：</strong>输入当前题目字符表中的互不相同 token，再点击网格交汇点或相邻格之间的边；多位数字请用空格分隔，例如“10 11”。</Hint>
       <div className="row">
-        <input type="text" data-input="lookoutDigits" maxLength={maximumSide} value={app.lookoutDigits} onChange={(event) => {
-          const palette = gridTokens(app.puzzle.grid);
-          app.lookoutDigits = Array.from(new Set(Array.from(event.target.value.toUpperCase()).filter((token) => palette.includes(token)))).join("");
+        <input type="text" data-input="lookoutDigits" maxLength={maximumSide * 4} value={app.lookoutDigits} onChange={(event) => {
+          app.lookoutDigits = event.target.value;
           sync();
-        }} placeholder="例如 34" />
+        }} placeholder="例如 3 4 或 10 11" />
       </div>
     </>;
   } else if (isPathTool(t)) {
@@ -374,8 +372,8 @@ export function ToolContext({ app, sync }: Props) {
         : pathType === "thermo" ? "温度计" : "箭头";
     const hasLineStyle = Boolean(pathType);
     const freeformHint = isFreeLine || pathType === "custom"
-      ? "点击相邻格连线，再次点击同一段可移除；可从任意节点分叉，也可首尾相连成环。"
-      : "按住拖动连续绘制，支持斜向连接和反向回退。";
+      ? "点击相邻格连线，再次点击同一段可移除；可分叉、成环，也可经过盘外虚拟格。"
+      : "按住拖动连续绘制，支持斜向连接、反向回退和盘外绕行；包含盘外节点时不自动判错。";
     content = <div className="path-controls">
       <Hint><strong>{name}：</strong>{description} {freeformHint}</Hint>
       {hasLineStyle && <>

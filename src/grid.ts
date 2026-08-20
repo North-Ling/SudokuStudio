@@ -14,10 +14,6 @@ export const STANDARD_GRID_PRESETS: readonly StandardGridPreset[] = [
   { size: 16, boxRows: 4, boxCols: 4 },
 ];
 
-const SYMBOLS = [
-  "1", "2", "3", "4", "5", "6", "7", "8", "9",
-  "A", "B", "C", "D", "E", "F", "G",
-] as const;
 const LETTER_SYMBOLS = "ABCDEFGHIJKLMNOP".split("");
 // 与 123 / ABC 等价的符号组，用于题面标记（星、圆、三角、箭头等常用符号）。
 const SYMBOL_TOKENS = [
@@ -73,7 +69,10 @@ export function normalizeGridSpec(
 }
 
 export function gridTokens(grid: GridSpec): string[] {
-  return SYMBOLS.slice(0, Math.max(grid.rows, grid.cols));
+  return Array.from(
+    { length: Math.max(grid.rows, grid.cols) },
+    (_, index) => String(index + 1),
+  );
 }
 
 export function letterGridTokens(grid: GridSpec): string[] {

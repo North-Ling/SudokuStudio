@@ -1,4 +1,4 @@
-import type { CellRef, DiagonalDirection, GridSide } from "./types";
+import type { CellRef, DiagonalDirection, GridSide, PathNodeRef } from "./types";
 
 // ----------------------------------------------------------------------------
 // 网格布局与命中检测
@@ -187,13 +187,25 @@ export interface CellHit {
   c: number;
 }
 
-export interface EdgeHit {
+export interface InternalEdgeHit {
   kind: "edgeH" | "edgeV";
   r: number;
   c: number;
   /** 命中点到边的最近距离 */
   dist: number;
 }
+
+export interface BorderEdgeHit {
+  kind: "borderEdge";
+  side: GridSide;
+  index: number;
+  /** 使用逻辑坐标标识其紧邻的盘外虚拟格。 */
+  r: number;
+  c: number;
+  dist: number;
+}
+
+export type EdgeHit = InternalEdgeHit | BorderEdgeHit;
 
 export interface CornerHit {
   kind: "corner";
@@ -301,6 +313,17 @@ export function hitCell(layout: Layout, x: number, y: number): CellHit | null {
   return { kind: "cell", r, c };
 }
 
+/** 命中真实格或紧邻盘面的单格宽虚拟外圈，返回统一的逻辑坐标。 */
+export function hitPathCell(layout: Layout, x: number, y: number): PathNodeRef | null {
+  const displayC = Math.floor(x / layout.cell);
+  const displayR = Math.floor(y / layout.cell);
+  if (
+    displayR < 0 || displayR >= layout.displayRows ||
+    displayC < 0 || displayC >= layout.displayCols
+  ) return null;
+  return [displayR - OUTSIDE_RING, displayC - OUTSIDE_RING];
+}
+
 export function segmentDistance(
   px: number,
   py: number,
@@ -361,6 +384,40 @@ export function hitEdge(
     }
   }
 
+
+  const considerBorder = (
+    side: GridSide,
+    index: number,
+    r: number,
+    c: number,
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+  ) => {
+    const d = segmentDistance(x, y, ax, ay, bx, by);
+    if (d < bestDist) {
+      bestDist = d;
+      best = { kind: "borderEdge", side, index, r, c, dist: d };
+    }
+  };
+
+  // 最外圈边：使用紧邻的盘外逻辑格坐标，便于悬停和连续笔划去重。
+  for (let c = 0; c < layout.cols; c++) {
+    const x1 = pad + c * cell;
+    const x2 = x1 + cell;
+    considerBorder("top", c, -1, c, x1, pad, x2, pad);
+    const bottomY = pad + layout.rows * cell;
+    considerBorder("bottom", c, layout.rows, c, x1, bottomY, x2, bottomY);
+  }
+  for (let r = 0; r < layout.rows; r++) {
+    const y1 = pad + r * cell;
+    const y2 = y1 + cell;
+    considerBorder("left", r, r, -1, pad, y1, pad, y2);
+    const rightX = pad + layout.cols * cell;
+    considerBorder("right", r, r, layout.cols, rightX, y1, rightX, y2);
+  }
+
   return best;
 }
 
@@ -387,7 +444,7 @@ export function hitCorner(
 }
 
 /** 两个格子是否八邻相邻（约束连线支持横、竖和斜向绘制） */
-export function areAdjacent(a: CellRef, b: CellRef): boolean {
+export function areAdjacent(a: PathNodeRef, b: PathNodeRef): boolean {
   const dr = Math.abs(a[0] - b[0]);
   const dc = Math.abs(a[1] - b[1]);
   return Math.max(dr, dc) === 1;

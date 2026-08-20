@@ -1,0 +1,2199 @@
+{
+  "title": "重复的数字",
+  "rules": "标准数独规则适用\n三条线上的10个格子填1-9和一个重复的数字，且重复的数字必须位于线的两端",
+  "difficulty": 0,
+  "grid": {
+    "rows": 9,
+    "cols": 9,
+    "preset": 9,
+    "regionMode": "standard",
+    "boxRows": 3,
+    "boxCols": 3,
+    "validationMode": "row-column-region"
+  },
+  "cells": [
+    [
+      {
+        "value": "5",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "3",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "6",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "4",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "1",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "8",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "2",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "value": "7",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "8",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "1",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "3",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "5",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "1",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "9",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "4",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "8",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "6",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "2",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "value": "6",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "5",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "",
+        "given": false,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      },
+      {
+        "value": "3",
+        "given": true,
+        "corner": [],
+        "center": [],
+        "colors": [],
+        "decorations": []
+      }
+    ]
+  ],
+  "edgeH": [
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ]
+  ],
+  "edgeV": [
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ],
+    [
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      },
+      {
+        "bold": false,
+        "symbol": null,
+        "decorations": []
+      }
+    ]
+  ],
+  "corners": [
+    [
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      }
+    ],
+    [
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      }
+    ],
+    [
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      }
+    ],
+    [
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      }
+    ],
+    [
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      }
+    ],
+    [
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      }
+    ],
+    [
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      }
+    ],
+    [
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      }
+    ],
+    [
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      }
+    ],
+    [
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      },
+      {
+        "symbols": []
+      }
+    ]
+  ],
+  "cages": [],
+  "thermos": [],
+  "arrows": [],
+  "lines": [
+    {
+      "id": 1,
+      "kind": "custom",
+      "cells": [
+        [
+          8,
+          4
+        ],
+        [
+          8,
+          5
+        ],
+        [
+          7,
+          5
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          5,
+          8
+        ],
+        [
+          4,
+          7
+        ],
+        [
+          3,
+          7
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          4,
+          6
+        ]
+      ],
+      "edges": [
+        [
+          [
+            8,
+            4
+          ],
+          [
+            8,
+            5
+          ]
+        ],
+        [
+          [
+            8,
+            5
+          ],
+          [
+            7,
+            5
+          ]
+        ],
+        [
+          [
+            7,
+            5
+          ],
+          [
+            7,
+            6
+          ]
+        ],
+        [
+          [
+            7,
+            6
+          ],
+          [
+            6,
+            7
+          ]
+        ],
+        [
+          [
+            6,
+            7
+          ],
+          [
+            5,
+            8
+          ]
+        ],
+        [
+          [
+            5,
+            8
+          ],
+          [
+            4,
+            7
+          ]
+        ],
+        [
+          [
+            4,
+            7
+          ],
+          [
+            3,
+            7
+          ]
+        ],
+        [
+          [
+            3,
+            7
+          ],
+          [
+            3,
+            6
+          ]
+        ],
+        [
+          [
+            3,
+            6
+          ],
+          [
+            4,
+            6
+          ]
+        ]
+      ],
+      "color": "#bfbfbf",
+      "thickness": 10
+    },
+    {
+      "id": 2,
+      "kind": "custom",
+      "cells": [
+        [
+          4,
+          5
+        ],
+        [
+          5,
+          5
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          1,
+          7
+        ],
+        [
+          2,
+          8
+        ]
+      ],
+      "edges": [
+        [
+          [
+            4,
+            5
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        [
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            4
+          ]
+        ],
+        [
+          [
+            5,
+            4
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        [
+          [
+            4,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        [
+          [
+            3,
+            4
+          ],
+          [
+            2,
+            4
+          ]
+        ],
+        [
+          [
+            2,
+            4
+          ],
+          [
+            1,
+            5
+          ]
+        ],
+        [
+          [
+            1,
+            5
+          ],
+          [
+            1,
+            6
+          ]
+        ],
+        [
+          [
+            1,
+            6
+          ],
+          [
+            1,
+            7
+          ]
+        ],
+        [
+          [
+            1,
+            7
+          ],
+          [
+            2,
+            8
+          ]
+        ]
+      ],
+      "color": "#bfbfbf",
+      "thickness": 10
+    },
+    {
+      "id": 3,
+      "kind": "custom",
+      "cells": [
+        [
+          8,
+          1
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          0
+        ],
+        [
+          5,
+          0
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "edges": [
+        [
+          [
+            8,
+            1
+          ],
+          [
+            7,
+            2
+          ]
+        ],
+        [
+          [
+            7,
+            2
+          ],
+          [
+            6,
+            1
+          ]
+        ],
+        [
+          [
+            6,
+            1
+          ],
+          [
+            6,
+            0
+          ]
+        ],
+        [
+          [
+            6,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        [
+          [
+            5,
+            0
+          ],
+          [
+            4,
+            1
+          ]
+        ],
+        [
+          [
+            4,
+            1
+          ],
+          [
+            3,
+            1
+          ]
+        ],
+        [
+          [
+            3,
+            1
+          ],
+          [
+            2,
+            0
+          ]
+        ],
+        [
+          [
+            2,
+            0
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            2
+          ]
+        ]
+      ],
+      "color": "#bfbfbf",
+      "thickness": 10
+    }
+  ],
+  "globalConstraints": {
+    "diagonal": false,
+    "antiKnight": false,
+    "antiKing": false,
+    "nonConsecutive": false
+  },
+  "lookouts": [],
+  "skyscrapers": [],
+  "xSums": [],
+  "littleKillers": [],
+  "solveLines": [],
+  "disabledRuleKeys": []
+}

@@ -1,4 +1,5 @@
 import { littleKillerTargetVertex } from "./geometry";
+import { maximumStandardSum } from "./grid";
 import type {
   CellRef,
   DiagonalDirection,
@@ -8,6 +9,7 @@ import type {
   LookoutAnchor,
   Puzzle,
 } from "./types";
+import { cellTokenNumericValue } from "./tokens";
 
 // ----------------------------------------------------------------------------
 // 约束的局部判错：只针对「刚填入的某个格子」，判断它是否让某个约束明确不成立。
@@ -18,13 +20,16 @@ function inBounds(p: Puzzle, r: number, c: number): boolean {
   return r >= 0 && c >= 0 && r < p.grid.rows && c < p.grid.cols;
 }
 
-/** 单元格数字值；非数字（空 / 字母等）返回 null。 */
+function pathFullyInBounds(p: Puzzle, cells: Array<readonly [number, number]>): boolean {
+  return cells.every(([r, c]) => inBounds(p, r, c));
+}
+
+/** 单元格 token 的数值语义；自定义非数字 token 返回 null。 */
 function num(p: Puzzle, r: number, c: number): number | null {
   if (!inBounds(p, r, c)) return null;
   const v = p.cells[r][c].value;
   if (v === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
+  return cellTokenNumericValue(v, p.grid);
 }
 
 /**
@@ -166,6 +171,7 @@ function checkEdgeSymbols(p: Puzzle, r: number, c: number, disabled: Set<string>
 function checkThermo(p: Puzzle, r: number, c: number, disabled: Set<string>): string | null {
   if (disabled.has("thermometer")) return null;
   for (const thermo of p.thermos) {
+    if (!pathFullyInBounds(p, thermo.cells)) continue;
     if (!thermo.cells.some(([cr, cc]) => cr === r && cc === c)) continue;
     const filled: number[] = [];
     for (const [cr, cc] of thermo.cells) {
@@ -182,6 +188,7 @@ function checkThermo(p: Puzzle, r: number, c: number, disabled: Set<string>): st
 function checkArrow(p: Puzzle, r: number, c: number, disabled: Set<string>): string | null {
   if (disabled.has("arrow")) return null;
   for (const arrow of p.arrows) {
+    if (!pathFullyInBounds(p, arrow.cells)) continue;
     if (!arrow.cells.some(([cr, cc]) => cr === r && cc === c)) continue;
     if (arrow.cells.length < 2) continue;
     const [hr, hc] = arrow.cells[0];
@@ -209,6 +216,7 @@ function lineIndex(line: LineConstraint, r: number, c: number): number {
 
 function checkLine(p: Puzzle, line: LineConstraint, r: number, c: number): boolean {
   const cells = line.cells;
+  if (!pathFullyInBounds(p, cells)) return false;
   const n = cells.length;
   const idx = lineIndex(line, r, c);
   if (idx < 0) return false;
@@ -396,6 +404,14 @@ function anchorNeighbors(p: Puzzle, anchor: LookoutAnchor): CellRef[] {
   } else if (anchor.kind === "edgeH") {
     add(anchor.r, anchor.c);
     add(anchor.r, anchor.c + 1);
+  } else if ("side" in anchor && anchor.side === "top") {
+    add(0, anchor.index);
+  } else if ("side" in anchor && anchor.side === "bottom") {
+    add(p.grid.rows - 1, anchor.index);
+  } else if ("side" in anchor && anchor.side === "left") {
+    add(anchor.index, 0);
+  } else if ("side" in anchor) {
+    add(anchor.index, p.grid.cols - 1);
   } else {
     add(anchor.r, anchor.c);
     add(anchor.r + 1, anchor.c);
@@ -461,6 +477,7 @@ function checkSkyscraper(p: Puzzle, r: number, c: number, disabled: Set<string>)
   if (disabled.has("skyscraper")) return null;
   for (const clue of p.skyscrapers) {
     const cells = skyscraperCells(p, clue.side, clue.index);
+    if (clue.value < 1 || clue.value > cells.length) continue;
     if (!cells.some(([cr, cc]) => cr === r && cc === c)) continue;
     if (!cells.every(([cr, cc]) => num(p, cr, cc) != null)) continue;
     const values = cells.map(([cr, cc]) => num(p, cr, cc)!);
@@ -472,6 +489,7 @@ function checkSkyscraper(p: Puzzle, r: number, c: number, disabled: Set<string>)
 function checkXSum(p: Puzzle, r: number, c: number, disabled: Set<string>): string | null {
   if (disabled.has("x-sum")) return null;
   for (const clue of p.xSums) {
+    if (clue.value < 1 || clue.value > maximumStandardSum(p.grid)) continue;
     const cells = skyscraperCells(p, clue.side, clue.index);
     if (!cells.some(([cr, cc]) => cr === r && cc === c)) continue;
     const first = num(p, cells[0][0], cells[0][1]);
@@ -492,6 +510,7 @@ function checkXSum(p: Puzzle, r: number, c: number, disabled: Set<string>): stri
 function checkLittleKiller(p: Puzzle, r: number, c: number, disabled: Set<string>): string | null {
   if (disabled.has("little-killer")) return null;
   for (const clue of p.littleKillers) {
+    if (clue.value < 1 || clue.value > maximumStandardSum(p.grid)) continue;
     const cells = littleKillerCells(p, clue.anchor, clue.direction);
     if (!cells.some(([cr, cc]) => cr === r && cc === c)) continue;
     let sum = 0;

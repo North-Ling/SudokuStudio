@@ -4,12 +4,15 @@ import type {
   CellRef,
   ColorName,
   Direction,
+  EdgeData,
   EdgeDecoration,
   EightDirection,
+  GridSide,
   LineConstraint,
   LineConstraintKind,
   LineStyle,
   LookoutAnchor,
+  PathNodeRef,
   Puzzle,
 } from "./types";
 import {
@@ -81,9 +84,9 @@ export interface RenderOpts {
   /** 正在构建的路径（温度计 / 箭头预览） */
   pendingPath: PendingPath | null;
   /** 正在构建的自由线边集合（自定义线 / 解题画线预览） */
-  pendingCustomEdges?: Array<[CellRef, CellRef]>;
+  pendingCustomEdges?: Array<[PathNodeRef, PathNodeRef]>;
   /** 自由线当前锚点格（预览起点） */
-  pendingCustomCell?: CellRef | null;
+  pendingCustomCell?: PathNodeRef | null;
   /** 自由线预览颜色 */
   pendingCustomColor?: string;
   /** 自由线预览粗细（相对单元格百分比） */
@@ -135,6 +138,24 @@ const CELL_COLORS: Record<ColorName, string> = {
 
 const FONT =
   '"Segoe UI", "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", sans-serif';
+
+/** 设置一个能完整放入指定宽度的字体，供 1–3 字符 token 自适应缩放。 */
+function setFittedFont(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  weight: number,
+  preferredSize: number,
+  maxWidth: number,
+  minimumScale = 0.42,
+): number {
+  ctx.font = `${weight} ${preferredSize}px ${FONT}`;
+  const measured = ctx.measureText(text).width;
+  const size = measured > maxWidth
+    ? Math.max(preferredSize * minimumScale, preferredSize * maxWidth / measured)
+    : preferredSize;
+  ctx.font = `${weight} ${size}px ${FONT}`;
+  return size;
+}
 
 export function render(
   ctx: CanvasRenderingContext2D,
@@ -238,16 +259,18 @@ function drawOutsideClues(
 ): void {
   const { cell } = layout;
   ctx.fillStyle = COLORS.text;
-  ctx.font = `700 ${Math.max(11, cell * 0.34)}px ${FONT}`;
   for (const clue of p.skyscrapers) {
     const point = outsideCluePoint(layout, clue.side, clue.index);
-    ctx.fillText(String(clue.value), point.x, point.y);
+    const text = String(clue.value);
+    setFittedFont(ctx, text, 700, Math.max(11, cell * 0.34), cell * 0.82, 0.32);
+    ctx.fillText(text, point.x, point.y);
   }
   ctx.fillStyle = "#ea580c";
-  ctx.font = `700 ${Math.max(11, cell * 0.32)}px ${FONT}`;
   for (const clue of p.xSums) {
     const point = outsideCluePoint(layout, clue.side, clue.index);
-    ctx.fillText(String(clue.value), point.x, point.y);
+    const text = String(clue.value);
+    setFittedFont(ctx, text, 700, Math.max(11, cell * 0.32), cell * 0.82, 0.32);
+    ctx.fillText(text, point.x, point.y);
   }
   drawLittleKillers(ctx, p, layout);
 }
@@ -310,8 +333,7 @@ function drawLittleKillers(
     ctx.fill();
 
     const text = String(clue.value);
-    const fontSize = Math.max(10, cell * 0.27);
-    ctx.font = `700 ${fontSize}px ${FONT}`;
+    const fontSize = setFittedFont(ctx, text, 700, Math.max(10, cell * 0.27), cell * 0.72, 0.32);
     const width = ctx.measureText(text).width + fontSize * 0.45;
     ctx.fillStyle = "rgba(255,255,255,0.94)";
     roundRectPath(
@@ -483,6 +505,11 @@ function drawBoldEdges(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layout)
       ctx.lineTo(pad + (c + 1) * cell, y);
     }
   }
+  forEachBorderEdge(p, layout, (edge, placement) => {
+    if (!edge.bold) return;
+    ctx.moveTo(placement.x1, placement.y1);
+    ctx.lineTo(placement.x2, placement.y2);
+  });
   ctx.stroke();
 }
 
@@ -579,7 +606,7 @@ function drawSolveLines(
 
 function drawThermoConstraint(
   ctx: CanvasRenderingContext2D,
-  cells: CellRef[],
+  cells: PathNodeRef[],
   layout: Layout,
   style: LineStyle = {},
 ): void {
@@ -605,7 +632,7 @@ function drawThermoConstraint(
 
 function drawArrowConstraint(
   ctx: CanvasRenderingContext2D,
-  cells: CellRef[],
+  cells: PathNodeRef[],
   layout: Layout,
   style: LineStyle = {},
 ): void {
@@ -649,7 +676,7 @@ function drawArrowConstraint(
 function drawVariantLine(
   ctx: CanvasRenderingContext2D,
   kind: LineConstraintKind,
-  cells: CellRef[],
+  cells: PathNodeRef[],
   layout: Layout,
   style: Pick<LineConstraint, "color" | "thickness"> = {},
   preview = false,
@@ -776,6 +803,18 @@ function drawEdgeSymbols(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layou
       drawEdgeSymbol(ctx, sym, mx, my, cell, 0, 1);
     }
   }
+  forEachBorderEdge(p, layout, (edge, placement) => {
+    if (!edge.symbol) return;
+    drawEdgeSymbol(
+      ctx,
+      edge.symbol,
+      placement.mx,
+      placement.my,
+      cell,
+      placement.inwardX,
+      placement.inwardY,
+    );
+  });
 }
 
 function drawEdgeDecorations(
@@ -785,7 +824,7 @@ function drawEdgeDecorations(
 ): void {
   const { pad, cell } = layout;
   const drawMarks = (
-    edge: import("./types").EdgeData,
+    edge: EdgeData,
     mx: number,
     my: number,
     tangentX: number,
@@ -820,6 +859,10 @@ function drawEdgeDecorations(
       drawMarks(edge, pad + (c + 0.5) * cell, pad + (r + 1) * cell, 1, 0);
     }
   }
+  forEachBorderEdge(p, layout, (edge, placement) => {
+    if (edge.decorations.length === 0) return;
+    drawMarks(edge, placement.mx, placement.my, placement.tangentX, placement.tangentY);
+  });
 }
 
 function drawEdgeDecoration(
@@ -933,6 +976,57 @@ function drawEdgeSymbol(
   }
 }
 
+interface BorderEdgePlacement {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  mx: number;
+  my: number;
+  tangentX: number;
+  tangentY: number;
+  inwardX: number;
+  inwardY: number;
+}
+
+function borderEdgePlacement(
+  layout: Layout,
+  side: GridSide,
+  index: number,
+): BorderEdgePlacement {
+  const { pad, cell, rows, cols } = layout;
+  if (side === "top" || side === "bottom") {
+    const y = side === "top" ? pad : pad + rows * cell;
+    const x1 = pad + index * cell;
+    return {
+      x1, y1: y, x2: x1 + cell, y2: y,
+      mx: x1 + cell / 2, my: y,
+      tangentX: 1, tangentY: 0,
+      inwardX: 0, inwardY: side === "top" ? 1 : -1,
+    };
+  }
+  const x = side === "left" ? pad : pad + cols * cell;
+  const y1 = pad + index * cell;
+  return {
+    x1: x, y1, x2: x, y2: y1 + cell,
+    mx: x, my: y1 + cell / 2,
+    tangentX: 0, tangentY: 1,
+    inwardX: side === "left" ? 1 : -1, inwardY: 0,
+  };
+}
+
+function forEachBorderEdge(
+  puzzle: Puzzle,
+  layout: Layout,
+  visit: (edge: EdgeData, placement: BorderEdgePlacement) => void,
+): void {
+  for (const side of ["top", "right", "bottom", "left"] as const) {
+    puzzle.borderEdges[side].forEach((edge, index) => {
+      visit(edge, borderEdgePlacement(layout, side, index));
+    });
+  }
+}
+
 // ---- 角符号 ----
 function drawCornerSymbols(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layout): void {
   const { cell } = layout;
@@ -1005,6 +1099,10 @@ function drawCornerText(
 
 function lookoutPoint(layout: Layout, anchor: LookoutAnchor): { x: number; y: number } {
   if (anchor.kind === "corner") return vertexPoint(layout, anchor.r, anchor.c);
+  if (anchor.kind === "borderEdge") {
+    const edge = borderEdgePlacement(layout, anchor.side, anchor.index);
+    return { x: edge.mx, y: edge.my };
+  }
   if (anchor.kind === "edgeH") {
     return {
       x: layout.pad + (anchor.c + 1) * layout.cell,
@@ -1147,7 +1245,13 @@ function drawDigits(
         const cellData = p.cells[r][c];
         if (cellData.value === "" || cellData.given !== given) continue;
         const { x, y } = cellCenter(layout, r, c);
-        ctx.font = `${given ? 600 : 500} ${fontSize}px ${FONT}`;
+        setFittedFont(
+          ctx,
+          cellData.value,
+          given ? 600 : 500,
+          fontSize,
+          cell * 0.82,
+        );
         ctx.fillStyle = conflicts.has(`${r},${c}`)
           ? COLORS.conflictDigit
           : constraintConflicts.has(`${r},${c}`)
@@ -1180,7 +1284,6 @@ function drawMarks(
         const slotW = cell / candidateShape.cols;
         const slotH = cell / candidateShape.rows;
         const fontSize = Math.min(slotW, slotH) * 0.62;
-        ctx.font = `400 ${fontSize}px ${FONT}`;
         cellData.center.forEach((token, index) => {
           const tokenPosition = palette.indexOf(token.toUpperCase());
           const position = tokenPosition >= 0
@@ -1188,6 +1291,7 @@ function drawMarks(
             : index % (candidateShape.rows * candidateShape.cols);
           const dr = Math.floor(position / candidateShape.cols);
           const dc = position % candidateShape.cols;
+          setFittedFont(ctx, token, 400, fontSize, slotW * 0.82, 0.32);
           ctx.fillStyle = conflicting.has(token) ? COLORS.constraintDigit : COLORS.pencil;
           ctx.fillText(
             token,
@@ -1198,26 +1302,29 @@ function drawMarks(
       }
 
       if (cellData.corner.length > 0) {
-        // 中标：按数字顺序紧凑排列在格子中央，数量多时分成两行。
-        const text = cellData.corner.join("");
-        const lines = text.length <= 5
-          ? [text]
-          : [text.slice(0, Math.ceil(text.length / 2)), text.slice(Math.ceil(text.length / 2))];
-        const fontSize = cell * (lines.length === 1 ? 0.22 : 0.19);
-        ctx.font = `400 ${fontSize}px ${FONT}`;
+        // 中标：保留多字符 token 的边界，数量较多时分成两行。
+        const middle = Math.ceil(cellData.corner.length / 2);
+        const lines = cellData.corner.length <= 5
+          ? [cellData.corner]
+          : [cellData.corner.slice(0, middle), cellData.corner.slice(middle)];
+        const preferredSize = cell * (lines.length === 1 ? 0.22 : 0.19);
         const centerX = rect.x + cell / 2;
         const centerY = rect.y + cell / 2;
-        const lineHeight = fontSize * 1.08;
-        lines.forEach((line, lineIndex) => {
+        const lineHeight = preferredSize * 1.12;
+        lines.forEach((tokens, lineIndex) => {
           const offset = (lineIndex - (lines.length - 1) / 2) * lineHeight;
-          const lineWidth = ctx.measureText(line).width;
+          const preview = tokens.join(" ");
+          const fontSize = setFittedFont(ctx, preview, 400, preferredSize, cell * 0.82, 0.35);
+          const gap = fontSize * 0.18;
+          const widths = tokens.map((token) => ctx.measureText(token).width);
+          const lineWidth = widths.reduce((sum, width) => sum + width, 0) + gap * Math.max(0, tokens.length - 1);
           let x = centerX - lineWidth / 2;
-          for (const ch of Array.from(line)) {
-            const chWidth = ctx.measureText(ch).width;
-            ctx.fillStyle = conflicting.has(ch) ? COLORS.constraintDigit : COLORS.pencil;
-            ctx.fillText(ch, x + chWidth / 2, centerY + offset);
-            x += chWidth;
-          }
+          tokens.forEach((token, tokenIndex) => {
+            const tokenWidth = widths[tokenIndex];
+            ctx.fillStyle = conflicting.has(token) ? COLORS.constraintDigit : COLORS.pencil;
+            ctx.fillText(token, x + tokenWidth / 2, centerY + offset);
+            x += tokenWidth + gap;
+          });
         });
       }
     }
@@ -1238,6 +1345,14 @@ function drawHover(ctx: CanvasRenderingContext2D, layout: Layout, hover: HitTarg
     const x0 = pad + hover.c * cell;
     ctx.fillStyle = COLORS.hoverFill;
     ctx.fillRect(x0, y - cell * 0.12, cell, cell * 0.24);
+  } else if (hover.kind === "borderEdge") {
+    const edge = borderEdgePlacement(layout, hover.side, hover.index);
+    ctx.fillStyle = COLORS.hoverFill;
+    if (hover.side === "top" || hover.side === "bottom") {
+      ctx.fillRect(edge.x1, edge.y1 - cell * 0.12, cell, cell * 0.24);
+    } else {
+      ctx.fillRect(edge.x1 - cell * 0.12, edge.y1, cell * 0.24, cell);
+    }
   } else if (hover.kind === "corner") {
     const pt = vertexPoint(layout, hover.r, hover.c);
     ctx.fillStyle = COLORS.hoverFill;

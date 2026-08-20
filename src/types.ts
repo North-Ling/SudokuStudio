@@ -7,7 +7,9 @@
 // ============================================================================
 
 export type CellRef = [number, number]; // [row, col]，0-based
-export type CellToken = string; // 空字符串表示空格，其余为单个显示字符
+/** 线路节点坐标；允许使用 -1 / rows / cols 表示紧邻盘面的虚拟外圈格。 */
+export type PathNodeRef = [number, number];
+export type CellToken = string; // 空字符串表示空格，其余为最多 3 个可见字符组成的 token
 
 export type StandardGridSize = 6 | 8 | 9 | 12 | 16;
 export type RegionMode = "standard" | "none";
@@ -52,7 +54,7 @@ export type CellDecoration =
   | { kind: "custom"; text: string };
 
 export interface CellData {
-  /** 空字符串 = 空；默认使用 1-9，也支持任意单字符 */
+  /** 空字符串 = 空；标准数独默认使用 1-N，也支持最多 3 个可见字符的自定义 token */
   value: CellToken;
   /** 是否为题目给出的已知数（线索） */
   given: boolean;
@@ -79,6 +81,14 @@ export interface EdgeData {
   symbol: EdgeSymbol | null;
   /** 与约束 symbol 分离的自由边装饰，可叠加 */
   decorations: EdgeDecoration[];
+}
+
+/** 最外圈四条边；数组下标对应列（top/bottom）或行（left/right）。 */
+export interface BorderEdges {
+  top: EdgeData[];
+  right: EdgeData[];
+  bottom: EdgeData[];
+  left: EdgeData[];
 }
 
 export type EdgeDecoration =
@@ -124,13 +134,13 @@ export interface LineStyle {
 export interface Thermo extends LineStyle {
   id: number;
   /** 有序路径，cells[0] 为温度计泡（最小），逐格递增 */
-  cells: CellRef[];
+  cells: PathNodeRef[];
 }
 
 export interface Arrow extends LineStyle {
   id: number;
   /** 有序路径，cells[0] 为圆圈（求和格），cells[last] 为箭头尖端 */
-  cells: CellRef[];
+  cells: PathNodeRef[];
 }
 
 export type LineConstraintKind =
@@ -150,13 +160,13 @@ export type LineConstraintKind =
 export interface LineConstraint extends LineStyle {
   id: number;
   kind: LineConstraintKind;
-  /** 按绘制顺序排列，允许横、竖和斜向连接 */
-  cells: CellRef[];
+  /** 按绘制顺序排列，允许横、竖、斜向以及盘外虚拟格连接 */
+  cells: PathNodeRef[];
   /**
    * 仅自定义线（custom）使用：相邻格对集合，支持分叉与环。
    * 存在时渲染与擦除优先使用它，cells 仅作为向后兼容的回退。
    */
-  edges?: Array<[CellRef, CellRef]>;
+  edges?: Array<[PathNodeRef, PathNodeRef]>;
   /** 自定义线的文字规则说明 */
   description?: string;
 }
@@ -174,7 +184,8 @@ export interface GlobalConstraints {
 
 export type LookoutAnchor =
   | { kind: "corner"; r: number; c: number }
-  | { kind: "edgeH" | "edgeV"; r: number; c: number };
+  | { kind: "edgeH" | "edgeV"; r: number; c: number }
+  | { kind: "borderEdge"; side: GridSide; index: number };
 
 export interface LookoutClue {
   anchor: LookoutAnchor;
@@ -228,6 +239,8 @@ export interface Puzzle {
    * （该边是水平的线段）
    */
   edgeV: EdgeData[][];
+  /** 真实网格最外圈的四组边，可承载自由描边、装饰和文字。 */
+  borderEdges: BorderEdges;
   /** 网格顶点：corner[r][c]，r∈0..rows，c∈0..cols */
   corners: CornerData[][];
   cages: KillerCage[];
