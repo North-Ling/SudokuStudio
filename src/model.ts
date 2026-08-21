@@ -127,6 +127,7 @@ export function createEmptyPuzzle(
     borderEdges: createBorderEdges(grid),
     corners,
     cages: [],
+    fortressCells: [],
     thermos: [],
     arrows: [],
     lines: [],
@@ -228,6 +229,12 @@ export function deserializePuzzle(json: string): Puzzle {
       relation: cage.relation ?? (cage.sum == null ? "none" : "equal"),
       sum: cage.sum ?? null,
     })),
+    fortressCells: sortCells(Array.from(new Map(
+      (data.fortressCells ?? [])
+        .filter(([r, c]) => Number.isInteger(r) && Number.isInteger(c) &&
+          r >= 0 && c >= 0 && r < grid.rows && c < grid.cols)
+        .map(([r, c]) => [cellKey(r, c), [r, c] as CellRef]),
+    ).values())),
     thermos: (data.thermos ?? []).map((thermo) => ({
       ...thermo,
       color: thermo.color || undefined,
@@ -401,6 +408,40 @@ export function findCageAt(p: Puzzle, r: number, c: number): KillerCage | null {
 
 export function removeCage(p: Puzzle, id: number): void {
   p.cages = p.cages.filter((c) => c.id !== id);
+}
+
+export function isFortressCell(p: Puzzle, r: number, c: number): boolean {
+  return p.fortressCells.some(([cr, cc]) => cr === r && cc === c);
+}
+
+export function setFortressCell(p: Puzzle, r: number, c: number, enabled: boolean): void {
+  const index = p.fortressCells.findIndex(([cr, cc]) => cr === r && cc === c);
+  if (enabled && index < 0) p.fortressCells = sortCells([...p.fortressCells, [r, c]]);
+  else if (!enabled && index >= 0) p.fortressCells.splice(index, 1);
+}
+
+/** 堡垒区域不存手工 id；每次按四方向连通性派生，增删格后自动合并或拆分。 */
+export function fortressRegions(p: Puzzle): CellRef[][] {
+  const remaining = new Set(p.fortressCells.map(([r, c]) => cellKey(r, c)));
+  const regions: CellRef[][] = [];
+  while (remaining.size > 0) {
+    const first = remaining.values().next().value as string;
+    const [startR, startC] = first.split(",").map(Number);
+    const queue: CellRef[] = [[startR, startC]];
+    const region: CellRef[] = [];
+    remaining.delete(first);
+    while (queue.length > 0) {
+      const [r, c] = queue.shift()!;
+      region.push([r, c]);
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+        const key = cellKey(r + dr, c + dc);
+        if (!remaining.delete(key)) continue;
+        queue.push([r + dr, c + dc]);
+      }
+    }
+    regions.push(sortCells(region));
+  }
+  return regions.sort((a, b) => a[0][0] - b[0][0] || a[0][1] - b[0][1]);
 }
 
 /** Killer 笼使用上下左右四方向连通；单格笼也视为有效。 */

@@ -49,11 +49,13 @@ import {
   edgeTextSymbol,
   findCageAt,
   inequalitySymbol,
+  isFortressCell,
   isOrthogonallyConnected,
   ARROW_DEFAULT_STYLE,
   LINE_DEFAULT_COLORS,
   nextId,
   setSkyscraperClue,
+  setFortressCell,
   THERMO_DEFAULT_STYLE,
   touchesOrthogonally,
   vxSymbol,
@@ -77,6 +79,7 @@ export type ToolMode =
   | "corner-arrow"
   | "corner-text"
   | "cage"
+  | "fortress"
   | "skyscraper"
   | "thermo"
   | "arrow"
@@ -98,7 +101,12 @@ export type ToolMode =
   | "free-line"
   | "erase";
 
-export type AppMode = "edit" | "solve";
+/**
+ * edit/preview 属于作者会话；play 只用于从已发布题目启动的正式挑战。
+ * 正式挑战不会通过 setMode 与作者模式互相切换。
+ */
+export type AppMode = "edit" | "preview" | "play";
+export type AuthorMode = Extract<AppMode, "edit" | "preview">;
 
 const EDIT_ONLY_TOOLS = new Set<ToolMode>([
   "edge-dot",
@@ -109,6 +117,7 @@ const EDIT_ONLY_TOOLS = new Set<ToolMode>([
   "corner-text",
   "cell-shape",
   "cage",
+  "fortress",
   "skyscraper",
   "thermo",
   "arrow",
@@ -198,7 +207,7 @@ export class App {
   puzzle: Puzzle;
   readonly history = new History();
 
-  mode: AppMode = "solve";
+  mode: AppMode = "preview";
   tool: ToolMode = "digit";
   tokenPalette: "digits" | "letters" | "symbols" = "digits";
   customCellToken = "";
@@ -239,13 +248,14 @@ export class App {
   pendingCustomEdges: Array<[PathNodeRef, PathNodeRef]> | null = null;
 
   private base: Puzzle;
-  private solveDraft: Puzzle;
+  private previewDraft: Puzzle;
   private ctx: CanvasRenderingContext2D | null = null;
   private pointerStrokeActive = false;
   private pointerStrokeSnapshotted = false;
   private cellDecorationStroke: CellDecorationStroke | null = null;
   private edgeStroke: EdgeStroke | null = null;
   private cageStrokeAction: "add" | "remove" | null = null;
+  private fortressStrokeAction: "add" | "remove" | null = null;
   private lastCustomCell: PathNodeRef | null = null;
   private lastFilledCells: CellRef[] = [];
   private constraintConflicts: CellRef[] = [];
@@ -256,7 +266,7 @@ export class App {
   constructor(puzzle: Puzzle) {
     this.base = clonePuzzle(puzzle);
     this.puzzle = clonePuzzle(puzzle);
-    this.solveDraft = clonePuzzle(puzzle);
+    this.previewDraft = clonePuzzle(puzzle);
   }
 
   attach(ctx: CanvasRenderingContext2D): void {
@@ -270,6 +280,7 @@ export class App {
     this.cellDecorationStroke = null;
     this.edgeStroke = null;
     this.cageStrokeAction = null;
+    this.fortressStrokeAction = null;
   }
 
   endPointerStroke(): void {
@@ -278,6 +289,7 @@ export class App {
     this.cellDecorationStroke = null;
     this.edgeStroke = null;
     this.cageStrokeAction = null;
+    this.fortressStrokeAction = null;
   }
 
   private snapshotForChange(): void {
@@ -453,6 +465,7 @@ export class App {
       "color",
       "cell-shape",
       "cage",
+      "fortress",
       ...Array.from(new Set<ToolMode>([
         "thermo", "arrow", ...Object.keys(LINE_TOOL_KIND) as ToolMode[], "free-line",
       ])),
@@ -467,18 +480,21 @@ export class App {
     return this.mode === "edit" || !EDIT_ONLY_TOOLS.has(tool);
   }
 
-  setMode(mode: AppMode): void {
+  setMode(mode: AuthorMode): void {
     if (mode === this.mode) return;
 
-    if (this.mode === "solve") {
-      this.solveDraft = clonePuzzle(this.puzzle);
+    if (this.mode === "preview") {
+      this.previewDraft = clonePuzzle(this.puzzle);
       this.puzzle = clonePuzzle(this.base);
-    } else {
+    } else if (this.mode === "edit") {
       const nextBase = clonePuzzle(this.puzzle);
       const definitionChanged = JSON.stringify(nextBase) !== JSON.stringify(this.base);
       this.base = nextBase;
-      if (definitionChanged) this.solveDraft = clonePuzzle(this.base);
-      this.puzzle = clonePuzzle(this.solveDraft);
+      if (definitionChanged) this.previewDraft = clonePuzzle(this.base);
+      this.puzzle = clonePuzzle(this.previewDraft);
+    } else {
+      // 离开正式挑战时只复制已发布题面，不把作答进度带入作者草稿。
+      this.puzzle = mode === "edit" ? clonePuzzle(this.base) : clonePuzzle(this.previewDraft);
     }
 
     this.mode = mode;
@@ -543,7 +559,7 @@ export class App {
   /** 解题模式清空草稿；编辑模式清空题面编辑并保留进入编辑时的已知数。 */
   clearAll(): void {
     this.history.snapshot(this.puzzle);
-    if (this.mode === "solve") {
+    if (this.mode !== "edit") {
       this.puzzle = clonePuzzle(this.base);
       this.selection = null;
       this.selectedCells = [];
@@ -577,11 +593,13 @@ export class App {
     this.render();
   }
 
-  loadPuzzle(puzzle: Puzzle): void {
+  /** 载入作者空间中的草稿；预览答案与正式挑战记录均不属于草稿。 */
+  loadAuthorPuzzle(puzzle: Puzzle, mode: AuthorMode = "edit"): void {
     const normalized = deserializePuzzle(JSON.stringify(puzzle));
     this.base = clonePuzzle(normalized);
-    this.solveDraft = clonePuzzle(normalized);
+    this.previewDraft = clonePuzzle(normalized);
     this.puzzle = clonePuzzle(normalized);
+    this.mode = mode;
     this.history.clear();
     this.selection = null;
     this.selectedCells = [];
@@ -593,8 +611,40 @@ export class App {
     this.render();
   }
 
+  /** 从已发布题面启动独立挑战，可选择恢复此前保存的进度。 */
+  startChallenge(definition: Puzzle, progress?: Puzzle): void {
+    const normalizedDefinition = deserializePuzzle(JSON.stringify(definition));
+    const normalizedProgress = progress
+      ? deserializePuzzle(JSON.stringify(progress))
+      : normalizedDefinition;
+    this.base = clonePuzzle(normalizedDefinition);
+    this.previewDraft = clonePuzzle(normalizedDefinition);
+    this.puzzle = clonePuzzle(normalizedProgress);
+    this.mode = "play";
+    this.history.clear();
+    this.selection = null;
+    this.selectedCells = [];
+    this.pendingCage = null;
+    this.pendingCageId = null;
+    this.pendingPath = null;
+    this.lastFilledCells = [];
+    this.candidatesDirty = true;
+    if (!this.canUseTool(this.tool)) this.tool = "digit";
+    this.render();
+  }
+
+  /** 兼容旧调用：按当前作者窗口载入，不会创建正式挑战。 */
+  loadPuzzle(puzzle: Puzzle): void {
+    this.loadAuthorPuzzle(puzzle, this.mode === "edit" ? "edit" : "preview");
+  }
+
+  /** 保存/发布时始终取得纯题面，排除作者预览和正式挑战中的作答。 */
+  getPuzzleDefinition(): Puzzle {
+    return clonePuzzle(this.mode === "edit" ? this.puzzle : this.base);
+  }
+
   newEmptyPuzzle(grid?: GridSpec): void {
-    this.loadPuzzle(createEmptyPuzzle("未命名题目", grid));
+    this.loadAuthorPuzzle(createEmptyPuzzle("未命名题目", grid), "edit");
   }
 
   setPuzzleMetadata(title: string, rules: string): void {
@@ -705,6 +755,10 @@ export class App {
       this.cageCellClick(r, c);
       return;
     }
+    if (this.tool === "fortress") {
+      this.toggleFortressCell(r, c);
+      return;
+    }
     if (isPathTool(this.tool)) {
       this.pathCellClick(r, c);
       return;
@@ -718,7 +772,7 @@ export class App {
 
   setValue(r: number, c: number, token: CellToken): void {
     const cell = this.puzzle.cells[r][c];
-    if (this.mode === "solve" && cell.given) return;
+    if (this.mode !== "edit" && cell.given) return;
     if (!token || cell.value === token) return;
     this.history.snapshot(this.puzzle);
     cell.value = token;
@@ -733,14 +787,14 @@ export class App {
 
   toggleValue(r: number, c: number, token: CellToken): void {
     const cell = this.puzzle.cells[r][c];
-    if (this.mode === "solve" && cell.given) return;
+    if (this.mode !== "edit" && cell.given) return;
     if (cell.value === token) this.clearValue(r, c);
     else this.setValue(r, c, token);
   }
 
   clearValue(r: number, c: number): void {
     const cell = this.puzzle.cells[r][c];
-    if (this.mode === "solve" && cell.given) return;
+    if (this.mode !== "edit" && cell.given) return;
     if (cell.value === "" && cell.corner.length === 0 && cell.center.length === 0)
       return;
     this.history.snapshot(this.puzzle);
@@ -755,7 +809,7 @@ export class App {
 
   toggleCorner(r: number, c: number, token: CellToken): void {
     const cell = this.puzzle.cells[r][c];
-    if (this.mode === "solve" && cell.given) return;
+    if (this.mode !== "edit" && cell.given) return;
     this.history.snapshot(this.puzzle);
     cell.corner = toggleInList(cell.corner, token);
     this.candidatesDirty = true;
@@ -764,7 +818,7 @@ export class App {
 
   toggleCenter(r: number, c: number, token: CellToken): void {
     const cell = this.puzzle.cells[r][c];
-    if (this.mode === "solve" && cell.given) return;
+    if (this.mode !== "edit" && cell.given) return;
     this.history.snapshot(this.puzzle);
     cell.center = toggleInList(cell.center, token);
     this.candidatesDirty = true;
@@ -941,7 +995,7 @@ export class App {
   eraseCell(r: number, c: number): void {
     const cell = this.puzzle.cells[r][c];
     if (
-      this.mode === "solve" && cell.given && cell.colors.length === 0
+      this.mode !== "edit" && cell.given && cell.colors.length === 0
     ) return;
     const hasEditableValue = this.mode === "edit" || !cell.given;
     const hasContent =
@@ -949,6 +1003,7 @@ export class App {
         (cell.value !== "" || cell.corner.length > 0 || cell.center.length > 0)) ||
       cell.colors.length > 0 ||
       (this.mode === "edit" && cell.decorations.length > 0) ||
+      (this.mode === "edit" && isFortressCell(this.puzzle, r, c)) ||
       (this.mode === "edit" && cell.given);
     if (!hasContent) return;
     this.snapshotForChange();
@@ -959,7 +1014,10 @@ export class App {
       cell.center = [];
     }
     cell.colors = [];
-    if (this.mode === "edit") cell.decorations = [];
+    if (this.mode === "edit") {
+      cell.decorations = [];
+      setFortressCell(this.puzzle, r, c, false);
+    }
     this.candidatesDirty = true;
     this.render();
   }
@@ -1048,7 +1106,7 @@ export class App {
         this.render();
         return;
       }
-      if (this.mode === "solve") {
+      if (this.mode !== "edit") {
         if (!edge.bold && edge.decorations.length === 0) return;
         this.snapshotForChange();
         edge.bold = false;
@@ -1198,7 +1256,7 @@ export class App {
   // ==========================================================================
 
   handleCornerClick(r: number, c: number): void {
-    if (this.mode === "solve") return;
+    if (this.mode !== "edit") return;
     if (r < 0 || r > this.puzzle.grid.rows || c < 0 || c > this.puzzle.grid.cols) return;
     const corner = this.puzzle.corners[r][c];
 
@@ -1318,6 +1376,39 @@ export class App {
       });
     }
     this.littleKillerError = "";
+    this.render();
+  }
+
+  // ==========================================================================
+  // 堡垒区域：格集合持久化，连通区域与边界箭头均按当前集合自动派生
+  // ==========================================================================
+
+  toggleFortressCell(r: number, c: number): void {
+    if (this.mode !== "edit") return;
+    this.snapshotForChange();
+    setFortressCell(this.puzzle, r, c, !isFortressCell(this.puzzle, r, c));
+    this.candidatesDirty = true;
+    this.render();
+  }
+
+  beginFortressStroke(r: number, c: number): void {
+    if (this.mode !== "edit") return;
+    this.fortressStrokeAction = isFortressCell(this.puzzle, r, c) ? "remove" : "add";
+    this.paintFortressStroke(r, c);
+  }
+
+  continueFortressStroke(r: number, c: number): void {
+    if (this.mode !== "edit" || !this.fortressStrokeAction) return;
+    this.paintFortressStroke(r, c);
+  }
+
+  private paintFortressStroke(r: number, c: number): void {
+    if (!this.fortressStrokeAction) return;
+    const enabled = this.fortressStrokeAction === "add";
+    if (isFortressCell(this.puzzle, r, c) === enabled) return;
+    this.snapshotForChange();
+    setFortressCell(this.puzzle, r, c, enabled);
+    this.candidatesDirty = true;
     this.render();
   }
 
@@ -1826,7 +1917,7 @@ export class App {
   // ==========================================================================
 
   eraseAt(x: number, y: number): void {
-    if (this.mode === "solve" && this.eraseSolveLinesAt(x, y)) return;
+    if (this.mode !== "edit" && this.eraseSolveLinesAt(x, y)) return;
     if (this.mode === "edit") {
       if (this.eraseDrawnConstraintAt(x, y)) return;
       const outerCell = hitOuterCell(this.layout, x, y);
@@ -2156,7 +2247,7 @@ export class App {
       return;
     }
     if (this.tool === "erase") {
-      if (this.mode === "solve") {
+      if (this.mode !== "edit") {
         const edge = hitEdge(this.layout, x, y, this.layout.cell * 0.22);
         const edgeData = edge ? this.getEdge(edge) : null;
         this.hover = edge && edgeData && (edgeData.bold || edgeData.decorations.length > 0)

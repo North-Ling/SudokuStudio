@@ -44,6 +44,7 @@ export const AUTHOR_TOOL_GROUPS: ToolGroupDef[] = [
     label: "格内区域约束",
     tools: [
       { tool: "cage", label: "Killer", hint: "滑过格子连续添加或移出杀手笼" },
+      { tool: "fortress", label: "堡垒", hint: "连续铺设灰色堡垒格；边界箭头自动朝向相邻外部格" },
     ],
   },
   {

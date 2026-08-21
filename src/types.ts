@@ -244,6 +244,8 @@ export interface Puzzle {
   /** 网格顶点：corner[r][c]，r∈0..rows，c∈0..cols */
   corners: CornerData[][];
   cages: KillerCage[];
+  /** 堡垒约束格；上下左右连通分量会自动视为一个区域。 */
+  fortressCells: CellRef[];
   thermos: Thermo[];
   arrows: Arrow[];
   lines: LineConstraint[];

@@ -1,5 +1,6 @@
 import { littleKillerTargetVertex } from "./geometry";
 import { maximumStandardSum } from "./grid";
+import { isFortressCell } from "./model";
 import type {
   CellRef,
   DiagonalDirection,
@@ -120,6 +121,26 @@ function checkNonConsecutive(p: Puzzle, r: number, c: number, disabled: Set<stri
   for (const [dr, dc] of ortho) {
     const m = num(p, r + dr, c + dc);
     if (m != null && Math.abs(m - n) === 1) return "non-consecutive";
+  }
+  return null;
+}
+
+function checkFortress(p: Puzzle, r: number, c: number, disabled: Set<string>): string | null {
+  if (disabled.has("fortress") || p.fortressCells.length === 0) return null;
+  const hereIsFortress = isFortressCell(p, r, c);
+  const hereValue = num(p, r, c);
+  if (hereValue == null) return null;
+  for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+    const nr = r + dr;
+    const nc = c + dc;
+    if (!inBounds(p, nr, nc)) continue;
+    const neighborIsFortress = isFortressCell(p, nr, nc);
+    if (neighborIsFortress === hereIsFortress) continue;
+    const neighborValue = num(p, nr, nc);
+    if (neighborValue == null) continue;
+    const fortressValue = hereIsFortress ? hereValue : neighborValue;
+    const outsideValue = hereIsFortress ? neighborValue : hereValue;
+    if (fortressValue <= outsideValue) return "fortress";
   }
   return null;
 }
@@ -548,6 +569,7 @@ export function findViolatedRules(
   push(checkAntiKnight(puzzle, r, c, disabled));
   push(checkAntiKing(puzzle, r, c, disabled));
   push(checkNonConsecutive(puzzle, r, c, disabled));
+  push(checkFortress(puzzle, r, c, disabled));
   for (const key of checkEdgeSymbols(puzzle, r, c, disabled)) push(key);
   push(checkThermo(puzzle, r, c, disabled));
   push(checkArrow(puzzle, r, c, disabled));
@@ -574,6 +596,7 @@ export function validatableRuleKeys(): string[] {
     "anti-knight",
     "anti-king",
     "non-consecutive",
+    "fortress",
     "white-dot",
     "black-dot",
     "inequality",

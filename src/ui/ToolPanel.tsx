@@ -10,7 +10,7 @@ interface Props {
 
 export function ToolPanel({ app, sync }: Props) {
   const activeGroupRef = useRef<HTMLDivElement>(null);
-  const groups = app.mode === "solve" ? SOLVE_TOOL_GROUPS : AUTHOR_TOOL_GROUPS;
+  const groups = app.mode !== "edit" ? SOLVE_TOOL_GROUPS : AUTHOR_TOOL_GROUPS;
 
   useEffect(() => {
     activeGroupRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });

@@ -248,6 +248,8 @@ export function ToolContext({ app, sync }: Props) {
       <Hint>输入文字后点击顶点添加；再次点击取消。</Hint>
       <div className="row"><input type="text" data-input="cornerText" value={app.cornerText} onChange={updateText("cornerText")} maxLength={6} placeholder="顶点文字 / 数字" /></div>
     </>;
+  } else if (t === "fortress") {
+    content = <Hint><strong>堡垒：</strong>按住滑过格子可连续铺设；从已有堡垒格开始则连续移除。上下左右连通的格子会自动合并为一个区域，只有与非堡垒格相接的边界会显示朝外小箭头。</Hint>;
   } else if (t === "cage") {
     const cageRelations = [
       ["equal", "和值 ="],
@@ -398,7 +400,7 @@ export function ToolContext({ app, sync }: Props) {
       </div>
     </div>;
   } else {
-    content = <Hint>{app.mode === "solve"
+    content = <Hint>{app.mode !== "edit"
       ? "按住滑动可连续清除答案、候选、着色和解题描边；题目约束与已知数保持锁定。"
       : "按住滑动可连续清除格子、边、顶点、盘外提示以及对应约束。"}</Hint>;
   }

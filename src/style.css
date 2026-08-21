@@ -171,6 +171,34 @@ body {
   gap: 8px;
 }
 
+.challenge-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.challenge-session-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--mode-border);
+  border-radius: 9px;
+  background: var(--mode-bg);
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.challenge-session-label span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar button.challenge-complete {
+  color: #047857;
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+}
+
 .topbar button.primary-action {
   border-color: var(--accent);
   background: var(--accent);
@@ -1228,6 +1256,39 @@ body {
   font-size: 11px;
 }
 
+.library-space-tabs {
+  max-width: 1180px;
+  margin: 0 auto 14px;
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.library-space-tabs button {
+  flex: 1;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.library-space-tabs button span {
+  margin-left: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.library-space-tabs button.active {
+  color: #fff;
+  background: var(--accent);
+}
+
 .library-search {
   width: min(420px, 100%);
   display: flex;
@@ -1329,6 +1390,11 @@ body {
   background: #f5f3ff;
 }
 
+.library-card-topline .challenge-badge {
+  color: #0369a1;
+  background: #f0f9ff;
+}
+
 .library-page-card h2 {
   margin: 0;
   font-size: 17px;
@@ -1369,6 +1435,8 @@ body {
 .library-page-card-footer > div {
   display: flex;
   gap: 5px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .library-page-card-footer button {

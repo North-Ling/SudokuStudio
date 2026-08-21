@@ -31,6 +31,7 @@ import { candidateGridShape, gridTokens } from "./grid";
 import {
   ARROW_DEFAULT_STYLE,
   cageAnchor,
+  isFortressCell,
   LINE_DEFAULT_COLORS,
   THERMO_DEFAULT_STYLE,
 } from "./model";
@@ -118,6 +119,8 @@ const COLORS = {
   hoverFill: "rgba(37,99,235,0.28)",
   cagePreviewFill: "rgba(34,197,94,0.18)",
   cagePreviewLine: "#16a34a",
+  fortressFill: "rgba(148,163,184,0.52)",
+  fortressArrow: "#64748b",
   thermo: "#94a3b8",
   arrowLine: "#475569",
   dotBlack: "#1f2937",
@@ -181,6 +184,7 @@ export function render(
   );
 
   drawCellFills(ctx, puzzle, layout);
+  drawFortressFills(ctx, puzzle, layout);
   drawSameDigit(ctx, puzzle, layout, opts.highlightValue);
   drawStandardConflicts(ctx, layout, standardConflicts);
   drawConstraintConflicts(ctx, layout, constraintConflicts);
@@ -193,6 +197,7 @@ export function render(
   drawOutsideClues(ctx, puzzle, layout);
   drawBoldEdges(ctx, puzzle, layout);
   drawCageBorders(ctx, puzzle, layout);
+  drawFortressArrows(ctx, puzzle, layout);
   drawEdgeSymbols(ctx, puzzle, layout);
   drawEdgeDecorations(ctx, puzzle, layout);
   drawCornerSymbols(ctx, puzzle, layout);
@@ -415,6 +420,63 @@ function drawCellFills(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layout)
       });
     }
   }
+}
+
+function drawFortressFills(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layout): void {
+  if (p.fortressCells.length === 0) return;
+  ctx.fillStyle = COLORS.fortressFill;
+  for (const [r, c] of p.fortressCells) {
+    const rect = cellRect(layout, r, c);
+    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+  }
+}
+
+/**
+ * 箭头由堡垒与非堡垒格的共享边实时派生；盘面外没有相邻数字，因此不画箭头。
+ * 箭身和箭头均收在本格边界内，避免与边符号混淆。
+ */
+function drawFortressArrows(ctx: CanvasRenderingContext2D, p: Puzzle, layout: Layout): void {
+  if (p.fortressCells.length === 0) return;
+  const directions = [
+    [-1, 0], [1, 0], [0, -1], [0, 1],
+  ] as const;
+  ctx.save();
+  ctx.strokeStyle = COLORS.fortressArrow;
+  ctx.lineWidth = Math.max(1.2, layout.cell * 0.035);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (const [r, c] of p.fortressCells) {
+    const center = cellCenter(layout, r, c);
+    for (const [dr, dc] of directions) {
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr < 0 || nc < 0 || nr >= p.grid.rows || nc >= p.grid.cols) continue;
+      if (isFortressCell(p, nr, nc)) continue;
+      const dx = dc;
+      const dy = dr;
+      const px = -dy;
+      const py = dx;
+      const start = {
+        x: center.x + dx * layout.cell * 0.37,
+        y: center.y + dy * layout.cell * 0.37,
+      };
+      const end = {
+        x: center.x + dx * layout.cell * 0.48,
+        y: center.y + dy * layout.cell * 0.48,
+      };
+      const headBack = layout.cell * 0.04;
+      const headWing = layout.cell * 0.035;
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.moveTo(end.x, end.y);
+      ctx.lineTo(end.x - dx * headBack + px * headWing, end.y - dy * headBack + py * headWing);
+      ctx.moveTo(end.x, end.y);
+      ctx.lineTo(end.x - dx * headBack - px * headWing, end.y - dy * headBack - py * headWing);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 
 function drawSameDigit(

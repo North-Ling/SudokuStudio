@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { App, type AppMode } from "../app";
-import { persistPuzzleToFolder, savePuzzleToLibrary, type PuzzleLibraryEntry } from "../library";
+import { App, type AuthorMode } from "../app";
+import {
+  completeChallenge,
+  persistPuzzleToFolder,
+  publishDraft,
+  saveChallengeProgress,
+  saveDraft,
+  startChallenge,
+  type ChallengeRecord,
+  type PublishedPuzzleEntry,
+  type PuzzleDraftEntry,
+} from "../library";
 import type { Puzzle } from "../types";
 // import { validationDescription } from "../grid";
 import { deriveAutomaticRuleDescriptions } from "../constraintRules";
@@ -31,16 +41,23 @@ export function SudokuStudio({ initialPuzzle }: Props) {
   if (app == null || Object.getPrototypeOf(app) !== App.prototype) {
     const previous = app;
     app = new App(previous?.puzzle ?? initialPuzzle);
-    if (previous?.mode === "edit") app.setMode("edit");
+    if (previous?.mode === "edit") app.loadAuthorPuzzle(previous.getPuzzleDefinition(), "edit");
+    else if (previous?.mode === "play") app.startChallenge(previous.getPuzzleDefinition(), previous.puzzle);
     appRef.current = app;
   }
-  const [, setRevision] = useState(0);
-  const [currentEntryId, setCurrentEntryId] = useState<string | null>("builtin-0");
+  const [revision, setRevision] = useState(0);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [currentPublishedId, setCurrentPublishedId] = useState<string | null>(null);
+  const [challenge, setChallenge] = useState<ChallengeRecord | null>(null);
+  const [libraryVersion, setLibraryVersion] = useState(0);
   const [modal, setModal] = useState<ModalKind>(null);
   const [page, setPage] = useState<PageKind>("studio");
-  const [saveLabel, setSaveLabel] = useState("保存到题库");
+  const [saveLabel, setSaveLabel] = useState("保存草稿");
+  const [publishLabel, setPublishLabel] = useState("发布题目");
   const [focusTitleToken, setFocusTitleToken] = useState(0);
   const saveTimer = useRef<number | null>(null);
+  const challengeSaveTimer = useRef<number | null>(null);
+  const [, setClock] = useState(0);
 
   const sync = useCallback(() => setRevision((value) => value + 1), []);
 
@@ -49,79 +66,157 @@ export function SudokuStudio({ initialPuzzle }: Props) {
     return () => {
       delete (window as DebugWindow).__sudoku;
       if (saveTimer.current != null) window.clearTimeout(saveTimer.current);
+      if (challengeSaveTimer.current != null) window.clearTimeout(challengeSaveTimer.current);
     };
   }, [app]);
 
-  const setMode = (mode: AppMode) => {
+  useEffect(() => {
+    if (app.mode !== "play" || !currentPublishedId || challenge?.status === "completed") return;
+    if (challengeSaveTimer.current != null) window.clearTimeout(challengeSaveTimer.current);
+    challengeSaveTimer.current = window.setTimeout(() => {
+      const saved = saveChallengeProgress(currentPublishedId, app.puzzle);
+      if (saved) setChallenge(saved);
+    }, 180);
+    return () => {
+      if (challengeSaveTimer.current != null) window.clearTimeout(challengeSaveTimer.current);
+    };
+  }, [app, revision, currentPublishedId, challenge?.status]);
+
+  useEffect(() => {
+    if (app.mode !== "play" || challenge?.status !== "in-progress") return;
+    const timer = window.setInterval(() => setClock((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [app.mode, challenge?.status]);
+
+  const setMode = (mode: AuthorMode) => {
     app.setMode(mode);
     sync();
   };
 
-  const openEntry = (entry: PuzzleLibraryEntry, mode: AppMode) => {
-    app.loadPuzzle(entry.puzzle);
-    app.setMode(mode);
-    setCurrentEntryId(entry.id);
+  const openDraft = (entry: PuzzleDraftEntry, mode: AuthorMode) => {
+    app.loadAuthorPuzzle(entry.puzzle, mode);
+    setCurrentDraftId(entry.id);
+    setCurrentPublishedId(entry.publishedId ?? null);
+    setChallenge(null);
     setPage("studio");
     sync();
   };
 
-  const savePuzzle = () => {
-    const title = app.puzzle.title.trim() || "未命名题目";
-    const rules = app.puzzle.rules.trim() || "标准数独规则适用";
-    app.setPuzzleMetadata(title, rules);
-    const saved = savePuzzleToLibrary(app.puzzle, currentEntryId);
-    setCurrentEntryId(saved.id);
-    setSaveLabel("已保存 ✓");
-    if (saveTimer.current != null) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => setSaveLabel("保存到题库"), 1200);
-    void persistPuzzleToFolder(app.puzzle).then((ok) => {
-      if (!ok) return;
-      setSaveLabel("已保存 ✓（已写入文件）");
-      if (saveTimer.current != null) window.clearTimeout(saveTimer.current);
-      saveTimer.current = window.setTimeout(() => setSaveLabel("保存到题库"), 1600);
-    });
+  const beginChallenge = (entry: PublishedPuzzleEntry, restart = false) => {
+    const record = startChallenge(entry, restart);
+    app.startChallenge(entry.puzzle, record.puzzle);
+    setCurrentPublishedId(entry.id);
+    setCurrentDraftId(null);
+    setChallenge(record);
+    setPage("studio");
     sync();
   };
 
+  const normalizedDefinition = () => {
+    const definition = app.getPuzzleDefinition();
+    definition.title = definition.title.trim() || "未命名题目";
+    definition.rules = definition.rules.trim() || "标准数独规则适用";
+    return definition;
+  };
+
+  const savePuzzleDraft = () => {
+    const saved = saveDraft(normalizedDefinition(), currentDraftId);
+    setCurrentDraftId(saved.id);
+    setCurrentPublishedId(saved.publishedId ?? currentPublishedId);
+    setSaveLabel("已保存 ✓");
+    setLibraryVersion((value) => value + 1);
+    if (saveTimer.current != null) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => setSaveLabel("保存草稿"), 1200);
+    sync();
+  };
+
+  const publishPuzzle = (source?: PuzzleDraftEntry) => {
+    const definition = source?.puzzle ?? normalizedDefinition();
+    const draft = source ?? saveDraft(definition, currentDraftId);
+    const published = publishDraft(definition, draft.id, draft.publishedId ?? currentPublishedId);
+    setCurrentDraftId(draft.id);
+    setCurrentPublishedId(published.id);
+    setPublishLabel("已发布 ✓");
+    setLibraryVersion((value) => value + 1);
+    if (saveTimer.current != null) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => setPublishLabel("发布题目"), 1400);
+    void persistPuzzleToFolder(definition);
+    sync();
+  };
+
+  const finishChallenge = () => {
+    if (!currentPublishedId || !challenge) return;
+    const hasEmptyCells = app.puzzle.cells.some((row) => row.some((cell) => cell.value === ""));
+    if (hasEmptyCells && !confirm("盘面仍有空格。自动纠错不是完成判定的前提，仍要由你标记为完成吗？")) return;
+    const completed = completeChallenge(currentPublishedId, app.puzzle);
+    if (completed) {
+      setChallenge(completed);
+      setLibraryVersion((value) => value + 1);
+    }
+  };
+
   const clearPuzzle = () => {
-    const message = app.mode === "solve"
-      ? "确定清空当前解题记录吗？题目和约束会保留。"
+    const message = app.mode !== "edit"
+      ? app.mode === "play" ? "确定清空当前正式挑战进度吗？题目和约束会保留。" : "确定清空作者预览记录吗？题目和约束会保留。"
       : "确定清空题面编辑吗？将保留进入出题模式时的已知数字。";
     if (!confirm(message)) return;
     app.clearAll();
     sync();
   };
 
-  return <div className={app.mode === "solve" ? "app-mode-solve" : "app-mode-author"} id="studio-shell">
+  const openLibrary = () => {
+    if (app.mode === "play" && currentPublishedId && challenge?.status === "in-progress") {
+      const saved = saveChallengeProgress(currentPublishedId, app.puzzle);
+      if (saved) setChallenge(saved);
+    }
+    setModal(null);
+    setPage("library");
+    setLibraryVersion((value) => value + 1);
+  };
+
+  const challengeElapsed = challenge
+    ? challenge.status === "completed" ? challenge.elapsedMs : Date.now() - challenge.startedAt
+    : 0;
+
+  return <div className={app.mode === "play" ? "app-mode-solve" : "app-mode-author"} id="studio-shell">
     <header className="topbar">
       <div className="brand">Sudoku<span>Studio</span></div>
-      <button id="btn-library" className={`library-button${page === "library" ? " active" : ""}`} title="打开题库页面" onClick={() => { setModal(null); setPage("library"); }}>▦ 题库</button>
-      {/* <div className="topbar-title">{page === "library" ? "数独题库" : app.puzzle.title || "未命名题目"}</div> */}
+      <button id="btn-library" className={`library-button${page === "library" ? " active" : ""}`} title="打开谜题空间" onClick={openLibrary}>▦ 谜题空间</button>
       {page === "studio" ? <>
-        <div className="mode-switch" role="group" aria-label="工作模式">
-        <button data-mode="solve" className={app.mode === "solve" ? "active" : ""} onClick={() => setMode("solve")} title="进入独立的解题窗口">
-          <span>解题</span>
-        </button>
-        <button data-mode="edit" className={app.mode === "edit" ? "active" : ""} onClick={() => setMode("edit")} title="进入独立的出题窗口">
-          <span>出题</span>
-        </button>
-      </div>
+        {app.mode === "play" ? <div className="challenge-session-label">
+          <strong>{challenge?.status === "completed" ? "已完成挑战" : "正式挑战"}</strong>
+          <span>{formatDuration(challengeElapsed)}</span>
+        </div> : <div className="mode-switch" role="group" aria-label="作者工作模式">
+          <button data-mode="preview" className={app.mode === "preview" ? "active" : ""} onClick={() => setMode("preview")} title="用做题交互预览草稿，不产生挑战记录">
+            <span>预览</span>
+          </button>
+          <button data-mode="edit" className={app.mode === "edit" ? "active" : ""} onClick={() => setMode("edit")} title="编辑题面和约束">
+            <span>编辑</span>
+          </button>
+        </div>}
       <div className="spacer" />
       <button id="btn-undo" disabled={!app.canUndo()} onClick={() => { app.undo(); sync(); }} title="撤销 (Ctrl/Cmd+Z)">↶ 撤销</button>
       <button id="btn-redo" disabled={!app.canRedo()} onClick={() => { app.redo(); sync(); }} title="重做 (Ctrl/Cmd+Shift+Z)">↷ 重做</button>
       <button id="btn-reset" onClick={() => { app.resetPuzzle(); sync(); }} title="重置到当前谜题初始状态">重置</button>
       <button id="btn-clear" onClick={clearPuzzle} title="清空当前内容">清空</button>
-      {app.mode === "edit" && <div className="author-actions">
+      {app.mode === "play" ? <div className="challenge-actions">
+        <button
+          className={challenge?.status === "completed" ? "challenge-complete" : "primary-action"}
+          disabled={challenge?.status === "completed"}
+          onClick={finishChallenge}
+        >{challenge?.status === "completed" ? "已记录完成 ✓" : "标记完成"}</button>
+      </div> : <div className="author-actions">
         <button id="btn-new" onClick={() => {
           setModal("new");
         }} title="创建一道空白题目">＋ 新建题目</button>
-        <button id="btn-save" className="primary-action" onClick={savePuzzle} title="保存到浏览器本地题库">{saveLabel}</button>
+        <button id="btn-save" onClick={savePuzzleDraft} title="保存到仅作者可见的草稿空间">{saveLabel}</button>
+        <button id="btn-publish" className="primary-action" onClick={() => publishPuzzle()} title="保存草稿并发布为可挑战题目">{publishLabel}</button>
         <button id="btn-export" onClick={() => setModal("export")} title="导出 PNG 题目卡片或 JSON">导出</button>
         <button id="btn-import" onClick={() => setModal("import")} title="从 JSON 导入">导入</button>
       </div>}
       </> : <>
         <div className="spacer" />
-        <button className="primary-action" onClick={() => setPage("studio")}>← 返回工作台</button>
+        <button className="primary-action" onClick={() => setPage("studio")}>← 返回当前会话</button>
       </>}
     </header>
 
@@ -133,9 +228,16 @@ export function SudokuStudio({ initialPuzzle }: Props) {
       </div>
       <ToolPanel app={app} sync={sync} />
     </main> : <LibraryPage
-      currentEntryId={currentEntryId}
-      openEntry={openEntry}
-      onDelete={(id) => { if (currentEntryId === id) setCurrentEntryId(null); }}
+      activeId={app.mode === "play" ? currentPublishedId : currentDraftId}
+      version={libraryVersion}
+      openDraft={openDraft}
+      publishEntry={publishPuzzle}
+      startEntry={beginChallenge}
+      onDelete={(id) => {
+        if (currentDraftId === id) setCurrentDraftId(null);
+        if (currentPublishedId === id) setCurrentPublishedId(null);
+        setLibraryVersion((value) => value + 1);
+      }}
     />}
 
     {/* {page === "studio"
@@ -144,19 +246,30 @@ export function SudokuStudio({ initialPuzzle }: Props) {
 
     {modal === "new" && <NewPuzzleModal close={() => setModal(null)} create={(grid) => {
       app.newEmptyPuzzle(grid);
-      app.setMode("edit");
-      setCurrentEntryId(null);
+      setCurrentDraftId(null);
+      setCurrentPublishedId(null);
+      setChallenge(null);
       setModal(null);
       setFocusTitleToken((value) => value + 1);
       sync();
     }} />}
-    {modal === "export" && <ExportModal puzzle={app.puzzle} json={app.exportJSON()} close={() => setModal(null)} />}
+    {modal === "export" && <ExportModal puzzle={app.getPuzzleDefinition()} json={JSON.stringify(app.getPuzzleDefinition(), null, 2)} close={() => setModal(null)} />}
     {modal === "import" && <ImportModal app={app} close={() => setModal(null)} imported={() => {
-      setCurrentEntryId(null);
+      setCurrentDraftId(null);
+      setCurrentPublishedId(null);
+      setChallenge(null);
       setModal(null);
       sync();
     }} />}
   </div>;
+}
+
+function formatDuration(ms: number): string {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const rest = seconds % 60;
+  return hours > 0 ? `${hours}时${minutes}分` : `${minutes}分${String(rest).padStart(2, "0")}秒`;
 }
 
 function PuzzleInfo({ app, sync, focusTitleToken }: { app: App; sync: () => void; focusTitleToken: number }) {
@@ -176,7 +289,7 @@ function PuzzleInfo({ app, sync, focusTitleToken }: { app: App; sync: () => void
   ));
   return <section className="puzzle-info" id="puzzle-info">
     {/* <div className="window-label">{app.mode === "solve" ? "解题窗口" : "出题工作台"}</div> */}
-    {app.mode === "solve"
+    {app.mode !== "edit"
       ? <div className="puzzle-heading">
         <h1>{title}</h1>
         {/* <div className="grid-badge">{app.puzzle.grid.rows}×{app.puzzle.grid.cols}{app.puzzle.grid.regionMode === "standard" ? ` · ${app.puzzle.grid.boxRows}×${app.puzzle.grid.boxCols} 宫` : " · 无标准宫"}</div> */}

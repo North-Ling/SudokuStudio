@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { App } from "./app";
+import { deriveAutomaticRuleDescriptions } from "./constraintRules";
 import { findViolatedRules } from "./constraintValidation";
 import { computeLayout, hitEdge, hitPathCell } from "./geometry";
-import { createEmptyPuzzle, deserializePuzzle } from "./model";
+import { createEmptyPuzzle, deserializePuzzle, fortressRegions } from "./model";
 
 describe("author-first outside clues", () => {
   it("keeps author-defined values outside standard Sudoku ranges", () => {
@@ -135,5 +136,68 @@ describe("paths through virtual outside cells", () => {
     });
 
     expect(findViolatedRules(puzzle, [0, 1], new Set())).not.toContain("thermometer");
+  });
+});
+
+describe("fortress regions", () => {
+  it("continuously paints and removes fortress cells as one undoable stroke", () => {
+    const app = new App(createEmptyPuzzle("fortress painting"));
+    app.setMode("edit");
+    app.selectTool("fortress");
+
+    app.beginPointerStroke();
+    app.beginFortressStroke(1, 1);
+    app.continueFortressStroke(1, 2);
+    app.continueFortressStroke(2, 2);
+    app.endPointerStroke();
+
+    expect(app.puzzle.fortressCells).toEqual([[1, 1], [1, 2], [2, 2]]);
+    expect(fortressRegions(app.puzzle)).toHaveLength(1);
+    app.undo();
+    expect(app.puzzle.fortressCells).toEqual([]);
+    app.redo();
+
+    app.beginPointerStroke();
+    app.beginFortressStroke(1, 2);
+    app.continueFortressStroke(2, 2);
+    app.endPointerStroke();
+    expect(app.puzzle.fortressCells).toEqual([[1, 1]]);
+    app.undo();
+    expect(app.puzzle.fortressCells).toEqual([[1, 1], [1, 2], [2, 2]]);
+  });
+
+  it("automatically splits and merges regions by orthogonal connectivity", () => {
+    const puzzle = createEmptyPuzzle("fortress components");
+    puzzle.fortressCells = [[2, 1], [2, 2], [2, 3]];
+    expect(fortressRegions(puzzle)).toHaveLength(1);
+
+    puzzle.fortressCells = [[2, 1], [2, 3]];
+    expect(fortressRegions(puzzle)).toEqual([[[2, 1]], [[2, 3]]]);
+  });
+
+  it("requires a fortress digit to exceed each orthogonally adjacent outside digit", () => {
+    const puzzle = createEmptyPuzzle("fortress validation");
+    puzzle.fortressCells = [[1, 1], [1, 2]];
+    puzzle.cells[1][1].value = "5";
+    puzzle.cells[1][2].value = "1"; // 同属堡垒，不互相比较
+    puzzle.cells[0][1].value = "6";
+
+    expect(findViolatedRules(puzzle, [1, 1], new Set())).toContain("fortress");
+    expect(findViolatedRules(puzzle, [0, 1], new Set())).toContain("fortress");
+    expect(findViolatedRules(puzzle, [1, 1], new Set(["fortress"]))).not.toContain("fortress");
+  });
+
+  it("migrates old puzzles and derives the automatic fortress rule", () => {
+    const raw = createEmptyPuzzle("fortress migration") as unknown as Record<string, unknown>;
+    delete raw.fortressCells;
+    expect(deserializePuzzle(JSON.stringify(raw)).fortressCells).toEqual([]);
+
+    const puzzle = createEmptyPuzzle("fortress rule");
+    puzzle.fortressCells = [[0, 0]];
+    expect(deriveAutomaticRuleDescriptions(puzzle)).toContainEqual({
+      key: "fortress",
+      label: "堡垒",
+      description: "堡垒区域内的数字必须大于其上下左右相邻的非堡垒格数字。",
+    });
   });
 });

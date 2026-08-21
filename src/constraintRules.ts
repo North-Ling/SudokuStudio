@@ -63,6 +63,9 @@ export function deriveAutomaticRuleDescriptions(
   if (cageRelations.has("at-most")) {
     add("cage-at-most", "杀手框上限", "虚线框内数字之和小于等于左上角提示数。");
   }
+  if (puzzle.fortressCells.length > 0) {
+    add("fortress", "堡垒", "堡垒区域内的数字必须大于其上下左右相邻的非堡垒格数字。");
+  }
   if (puzzle.thermos.length > 0) {
     add("thermometer", "温度计", "灯泡端为最小值，沿温度计向外数字严格递增。");
   }

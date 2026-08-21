@@ -71,6 +71,12 @@ export function attachInput(
         app.beginCageStroke(cell.r, cell.c);
         lastCell = [cell.r, cell.c];
       }
+    } else if (tool === "fortress") {
+      const cell = hitCell(L(app), x, y);
+      if (cell) {
+        app.beginFortressStroke(cell.r, cell.c);
+        lastCell = [cell.r, cell.c];
+      }
     } else if (isPathTool(tool)) {
       const node = hitPathCell(L(app), x, y);
       if (node) {
@@ -122,14 +128,15 @@ export function attachInput(
             onStateChange();
           }
         }
-      } else if (tool === "cell-shape" || tool === "cage") {
+      } else if (tool === "cell-shape" || tool === "cage" || tool === "fortress") {
         const cell = hitCell(L(app), x, y);
         if (cell) {
           const key = `${cell.r},${cell.c}`;
           const lastKey = lastCell ? `${lastCell[0]},${lastCell[1]}` : null;
           if (key !== lastKey) {
             if (tool === "cell-shape") app.continueCellDecorationStroke(cell.r, cell.c);
-            else app.cageCellPaint(cell.r, cell.c);
+            else if (tool === "cage") app.cageCellPaint(cell.r, cell.c);
+            else app.continueFortressStroke(cell.r, cell.c);
             lastCell = [cell.r, cell.c];
             onStateChange();
           }
